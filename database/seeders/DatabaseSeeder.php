@@ -13,8 +13,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminSeeder::class,        // admin@admin.com / password
-            MasterSeeder::class,       // supplier, barang, klien
-            DemoTransaksiSeeder::class, // contoh pembelian, nota, pembayaran (hapus baris ini jika tidak perlu)
         ]);
     }
 }
