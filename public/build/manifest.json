@@ -1,0 +1,217 @@
+{
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-italic.woff": {
+    "file": "assets/tinos-cyrillic-400-italic-CUXT6ECP.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-italic.woff2": {
+    "file": "assets/tinos-cyrillic-400-italic-D26KjN84.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-normal.woff": {
+    "file": "assets/tinos-cyrillic-400-normal-BInRL8Bn.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-normal.woff2": {
+    "file": "assets/tinos-cyrillic-400-normal-kS2dpklR.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-700-normal.woff": {
+    "file": "assets/tinos-cyrillic-700-normal-HYhic5tl.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-700-normal.woff2": {
+    "file": "assets/tinos-cyrillic-700-normal-DGklj3DM.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-italic.woff": {
+    "file": "assets/tinos-cyrillic-ext-400-italic-CgiySoL2.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-italic.woff2": {
+    "file": "assets/tinos-cyrillic-ext-400-italic-Bz6A2Xew.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-normal.woff": {
+    "file": "assets/tinos-cyrillic-ext-400-normal-l41d2z3M.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-normal.woff2": {
+    "file": "assets/tinos-cyrillic-ext-400-normal-DdITlKdb.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-700-normal.woff": {
+    "file": "assets/tinos-cyrillic-ext-700-normal-yBtNmQaZ.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-700-normal.woff2": {
+    "file": "assets/tinos-cyrillic-ext-700-normal-CE86bzrR.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-cyrillic-ext-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-400-italic.woff": {
+    "file": "assets/tinos-greek-400-italic-Dc-Zjc_Z.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-400-italic.woff2": {
+    "file": "assets/tinos-greek-400-italic-CITkaQD8.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-400-normal.woff": {
+    "file": "assets/tinos-greek-400-normal-D6DCdDEC.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-400-normal.woff2": {
+    "file": "assets/tinos-greek-400-normal-BKmklotr.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-700-normal.woff": {
+    "file": "assets/tinos-greek-700-normal-CAsZoNo7.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-700-normal.woff2": {
+    "file": "assets/tinos-greek-700-normal-DZiY5218.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-italic.woff": {
+    "file": "assets/tinos-greek-ext-400-italic-C7FWsVQN.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-italic.woff2": {
+    "file": "assets/tinos-greek-ext-400-italic-QOcg_kQA.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-normal.woff": {
+    "file": "assets/tinos-greek-ext-400-normal-BY5Lx0CY.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-normal.woff2": {
+    "file": "assets/tinos-greek-ext-400-normal-1tgngtmV.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-700-normal.woff": {
+    "file": "assets/tinos-greek-ext-700-normal-Bu9AJavU.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-greek-ext-700-normal.woff2": {
+    "file": "assets/tinos-greek-ext-700-normal-nVGGTb9r.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-greek-ext-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-400-italic.woff": {
+    "file": "assets/tinos-hebrew-400-italic-k5xAEjEk.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-400-italic.woff2": {
+    "file": "assets/tinos-hebrew-400-italic-Cp89YzKh.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-400-normal.woff": {
+    "file": "assets/tinos-hebrew-400-normal-DhGqnHb1.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-400-normal.woff2": {
+    "file": "assets/tinos-hebrew-400-normal-B17QmYDt.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-700-normal.woff": {
+    "file": "assets/tinos-hebrew-700-normal-B737la7J.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-hebrew-700-normal.woff2": {
+    "file": "assets/tinos-hebrew-700-normal-BNVAlJ0i.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-hebrew-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-400-italic.woff": {
+    "file": "assets/tinos-latin-400-italic-HcuZF3H0.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-400-italic.woff2": {
+    "file": "assets/tinos-latin-400-italic-BYAl0kbZ.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-400-normal.woff": {
+    "file": "assets/tinos-latin-400-normal-B05awSIM.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-400-normal.woff2": {
+    "file": "assets/tinos-latin-400-normal-rilFpyjL.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-700-normal.woff": {
+    "file": "assets/tinos-latin-700-normal-CjcRkLdR.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-700-normal.woff2": {
+    "file": "assets/tinos-latin-700-normal-qGf2y18O.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-italic.woff": {
+    "file": "assets/tinos-latin-ext-400-italic-DKtLLJa2.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-italic.woff2": {
+    "file": "assets/tinos-latin-ext-400-italic-WsHooD3r.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-normal.woff": {
+    "file": "assets/tinos-latin-ext-400-normal-BUQPNqi9.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-normal.woff2": {
+    "file": "assets/tinos-latin-ext-400-normal-C68eX7xt.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-700-normal.woff": {
+    "file": "assets/tinos-latin-ext-700-normal-nLvPiDAe.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-latin-ext-700-normal.woff2": {
+    "file": "assets/tinos-latin-ext-700-normal-CesJqEpY.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-latin-ext-700-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-italic.woff": {
+    "file": "assets/tinos-vietnamese-400-italic-C0nreyLC.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-italic.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-italic.woff2": {
+    "file": "assets/tinos-vietnamese-400-italic-BJdaJnTX.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-italic.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-normal.woff": {
+    "file": "assets/tinos-vietnamese-400-normal-BYl6xqrz.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-normal.woff2": {
+    "file": "assets/tinos-vietnamese-400-normal-CrJeqB3M.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-400-normal.woff2"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-700-normal.woff": {
+    "file": "assets/tinos-vietnamese-700-normal-bKCZ5S7w.woff",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-700-normal.woff"
+  },
+  "node_modules/@fontsource/tinos/files/tinos-vietnamese-700-normal.woff2": {
+    "file": "assets/tinos-vietnamese-700-normal-CmLX0U_H.woff2",
+    "src": "node_modules/@fontsource/tinos/files/tinos-vietnamese-700-normal.woff2"
+  },
+  "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff": {
+    "file": "assets/bootstrap-icons-BHUGvtHM.woff",
+    "src": "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff"
+  },
+  "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2": {
+    "file": "assets/bootstrap-icons-DJdhg9lH.woff2",
+    "src": "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-ClW5npBO.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-DSvlt-6C.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}
