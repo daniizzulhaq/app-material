@@ -19,12 +19,15 @@ class KlienController extends Controller
                     ->orWhere('no_hp', 'like', "%{$request->q}%")
                     ->orWhere('alamat', 'like', "%{$request->q}%"));
             })
+            ->kategori($request->kategori)
             ->withCount('transaksis')
             ->orderBy('nama')
             ->paginate(15)
             ->withQueryString();
 
-        return view('klien.index', compact('kliens'));
+        $jumlahPerKategori = Klien::selectRaw('kategori, COUNT(*) AS jumlah')->groupBy('kategori')->pluck('jumlah', 'kategori');
+
+        return view('klien.index', compact('kliens', 'jumlahPerKategori'));
     }
 
     public function create(): View

@@ -28,6 +28,8 @@ class TransaksiController extends Controller
             ->when($request->filled('dari'), fn ($q) => $q->whereDate('tanggal', '>=', $request->dari))
             ->when($request->filled('sampai'), fn ($q) => $q->whereDate('tanggal', '<=', $request->sampai))
             ->when($request->filled('klien_id'), fn ($q) => $q->where('klien_id', $request->klien_id))
+            ->when(array_key_exists((string) $request->kategori, Klien::KATEGORI),
+                fn ($q) => $q->whereIn('klien_id', Klien::kategori($request->kategori)->select('id')))
             ->when($request->filled('status_bayar'), fn ($q) => $q->where('status_bayar', $request->status_bayar))
             ->when($request->filled('q'), fn ($q) => $q->where('no_nota', 'like', "%{$request->q}%"))
             // Filter berdasarkan isi item nota
@@ -49,7 +51,7 @@ class TransaksiController extends Controller
         return view('transaksi.index', [
             'transaksis' => $transaksis,
             'ringkasan' => $ringkasan,
-            'kliens' => Klien::orderBy('nama')->get(['id', 'nama']),
+            'kliens' => Klien::kategori($request->kategori)->orderBy('nama')->get(['id', 'nama']),
             'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama']),
             'barangs' => Barang::orderBy('nama')->get(['id', 'nama']),
         ]);
@@ -134,7 +136,7 @@ class TransaksiController extends Controller
         return [
             'transaksi' => $transaksi,
             'items' => $items, // indeks asli dipertahankan agar error validasi cocok per baris
-            'kliens' => Klien::orderBy('nama')->get(['id', 'nama']),
+            'kliens' => Klien::orderBy('nama')->get(['id', 'nama', 'kategori']),
             'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama']),
             'barangs' => $barangs,
             // HPP terkunci milik nota ini (agar tampilan edit sesuai perhitungan server)

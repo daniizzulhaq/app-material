@@ -27,7 +27,7 @@
                     <select id="klien_id" name="klien_id" class="tom-select @error('klien_id') is-invalid @enderror" placeholder="Pilih klien..." required>
                         <option value="">Pilih klien...</option>
                         @foreach ($kliens as $k)
-                            <option value="{{ $k->id }}" @selected(old('klien_id', $transaksi->klien_id) == $k->id)>{{ $k->nama }}</option>
+                            <option value="{{ $k->id }}" @selected(old('klien_id', $transaksi->klien_id) == $k->id)>{{ $k->nama }} · {{ $k->nama_kategori }}</option>
                         @endforeach
                     </select>
                     @error('klien_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror

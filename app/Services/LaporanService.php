@@ -27,12 +27,16 @@ class LaporanService
     /**
      * Per klien. Jika klien dipilih → daftar nota klien tsb; jika tidak → rekap per klien.
      */
-    public function klien(string $dari, string $sampai, ?int $klienId = null): array
+    public function klien(string $dari, string $sampai, ?int $klienId = null, ?string $kategori = null): array
     {
+        $kategori = array_key_exists((string) $kategori, Klien::KATEGORI) ? $kategori : null;
+
         $base = Transaksi::query()
             ->leftJoinSub($this->bayarPerNota(), 'bayar', 'bayar.transaksi_id', '=', 'transaksis.id')
             ->whereBetween('transaksis.tanggal', [$dari, $sampai])
-            ->when($klienId, fn ($q) => $q->where('transaksis.klien_id', $klienId));
+            ->when($klienId, fn ($q) => $q->where('transaksis.klien_id', $klienId))
+            // Kategori klien: groceries / material
+            ->when($kategori, fn ($q) => $q->whereIn('transaksis.klien_id', Klien::kategori($kategori)->select('id')));
 
         if ($klienId) {
             $rows = $base->select('transaksis.*', DB::raw('COALESCE(bayar.dibayar, 0) AS dibayar'))
@@ -59,10 +63,11 @@ class LaporanService
                 ->groupBy('transaksis.klien_id')
                 ->get();
 
-            $kliens = Klien::whereIn('id', $agregat->pluck('klien_id'))->pluck('nama', 'id');
+            $kliens = Klien::whereIn('id', $agregat->pluck('klien_id'))->get(['id', 'nama', 'kategori'])->keyBy('id');
 
             $rows = $agregat->map(fn ($r) => (object) [
-                'nama' => $kliens[$r->klien_id] ?? '-',
+                'nama' => $kliens[$r->klien_id]->nama ?? '-',
+                'kategori' => $kliens[$r->klien_id]->kategori ?? null,
                 'jumlah_nota' => (int) $r->jumlah_nota,
                 'total_jual' => (float) $r->total_jual,
                 'dibayar' => (float) $r->dibayar,
@@ -74,7 +79,12 @@ class LaporanService
         return [
             'rows' => $rows,
             'klien' => $klienId ? Klien::find($klienId) : null,
+            'kategori' => $kategori,
             'total' => $this->jumlahkan($rows, ['jumlah_nota', 'total_jual', 'dibayar', 'sisa', 'laba']),
+            // Subtotal per kategori (hanya saat rekap semua klien tanpa filter kategori)
+            'totalKategori' => ($klienId || $kategori) ? [] : collect(Klien::KATEGORI)->map(fn ($k, $val) => $this->jumlahkan(
+                $rows->where('kategori', $val), ['jumlah_nota', 'total_jual', 'dibayar', 'sisa', 'laba']
+            ))->all(),
         ];
     }
 

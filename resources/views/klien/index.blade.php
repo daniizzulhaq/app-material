@@ -7,10 +7,21 @@
 <div class="card">
     <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
         <form method="GET" class="d-flex gap-2" role="search">
+            <input type="hidden" name="kategori" value="{{ request('kategori') }}">
             <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Cari nama, no. HP, alamat..." style="min-width: 240px">
             <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>
         </form>
-        <a href="{{ route('klien.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Klien</a>
+        <a href="{{ route('klien.create', ['kategori' => request('kategori')]) }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Klien</a>
+    </div>
+    <div class="card-body py-2 border-bottom">
+        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Kategori klien">
+            <a href="{{ request()->fullUrlWithQuery(['kategori' => null, 'page' => null]) }}"
+               class="btn {{ request('kategori') ? 'btn-light' : 'btn-primary' }}">Semua ({{ $jumlahPerKategori->sum() }})</a>
+            @foreach (\App\Models\Klien::KATEGORI as $val => $k)
+                <a href="{{ request()->fullUrlWithQuery(['kategori' => $val, 'page' => null]) }}"
+                   class="btn {{ request('kategori') === $val ? 'btn-primary' : 'btn-light' }}"><i class="bi {{ $k['icon'] }} me-1"></i>{{ $k['label'] }} ({{ $jumlahPerKategori[$val] ?? 0 }})</a>
+            @endforeach
+        </div>
     </div>
 
     @if ($kliens->isEmpty())
@@ -22,11 +33,12 @@
         </x-empty-state>
     @else
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle" data-mobile-judul="2">
                 <thead>
                     <tr>
                         <th style="width:50px">#</th>
                         <th>Nama</th>
+                        <th>Kategori</th>
                         <th>No. HP</th>
                         <th>Alamat</th>
                         <th>Keterangan</th>
@@ -39,6 +51,7 @@
                         <tr>
                             <td class="text-muted">{{ $kliens->firstItem() + $loop->index }}</td>
                             <td class="fw-semibold">{{ $klien->nama }}</td>
+                            <td><x-kategori-badge :kategori="$klien->kategori" /></td>
                             <td>{{ $klien->no_hp ?: '-' }}</td>
                             <td class="text-muted">{{ Str::limit($klien->alamat, 50) ?: '-' }}</td>
                             <td class="text-muted">{{ Str::limit($klien->keterangan, 40) ?: '-' }}</td>

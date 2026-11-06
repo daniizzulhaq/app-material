@@ -11,6 +11,7 @@
                 <th>Status</th>
             @else
                 <th>Klien</th>
+                <th>Kategori</th>
                 <th class="text-end num">Jumlah Nota</th>
             @endif
             <th class="text-end num">Total Jual</th>
@@ -28,6 +29,7 @@
                     <td>{{ ucfirst($r->status_bayar) }}</td>
                 @else
                     <td>{{ $r->nama }}</td>
+                    <td>{{ \App\Models\Klien::KATEGORI[$r->kategori]['label'] ?? '-' }}</td>
                     <td class="num">{{ $r->jumlah_nota }}</td>
                 @endif
                 <td class="num">{{ $uang($r->total_jual) }}</td>
@@ -38,8 +40,18 @@
         @endforeach
     </tbody>
     <tfoot>
+        @foreach ($totalKategori ?? [] as $val => $t)
+            <tr>
+                <th colspan="2">Total Klien {{ \App\Models\Klien::KATEGORI[$val]['label'] }}</th>
+                <th class="num">{{ $t['jumlah_nota'] }}</th>
+                <th class="num">{{ $uang($t['total_jual']) }}</th>
+                <th class="num">{{ $uang($t['dibayar']) }}</th>
+                <th class="num">{{ $uang($t['sisa']) }}</th>
+                <th class="num">{{ $uang($t['laba']) }}</th>
+            </tr>
+        @endforeach
         <tr>
-            <th colspan="{{ $klien ? 3 : 1 }}">TOTAL</th>
+            <th colspan="{{ $klien ? 3 : 2 }}">TOTAL{{ $kategori ? ' KLIEN ' . strtoupper(\App\Models\Klien::KATEGORI[$kategori]['label']) : '' }}</th>
             @unless ($klien) <th class="num">{{ $total['jumlah_nota'] }}</th> @endunless
             <th class="num">{{ $uang($total['total_jual']) }}</th>
             <th class="num">{{ $uang($total['dibayar']) }}</th>

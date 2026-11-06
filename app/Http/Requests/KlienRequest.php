@@ -15,6 +15,7 @@ class KlienRequest extends FormRequest
     {
         return [
             'nama' => ['required', 'string', 'max:150'],
+            'kategori' => ['required', 'in:' . implode(',', array_keys(\App\Models\Klien::KATEGORI))],
             'no_hp' => ['nullable', 'string', 'max:30'],
             'alamat' => ['nullable', 'string', 'max:1000'],
             'keterangan' => ['nullable', 'string', 'max:1000'],

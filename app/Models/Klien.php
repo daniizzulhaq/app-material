@@ -9,7 +9,23 @@ class Klien extends Model
 {
     protected $table = 'kliens';
 
-    protected $fillable = ['nama', 'no_hp', 'alamat', 'keterangan'];
+    /** Jenis rekap klien */
+    public const KATEGORI = [
+        'groceries' => ['label' => 'Groceries', 'icon' => 'bi-basket2', 'warna' => 'success'],
+        'material' => ['label' => 'Material', 'icon' => 'bi-bricks', 'warna' => 'warning'],
+    ];
+
+    protected $fillable = ['nama', 'kategori', 'no_hp', 'alamat', 'keterangan'];
+
+    public function scopeKategori($query, ?string $kategori)
+    {
+        return $query->when(array_key_exists((string) $kategori, self::KATEGORI), fn ($q) => $q->where('kliens.kategori', $kategori));
+    }
+
+    public function getNamaKategoriAttribute(): string
+    {
+        return self::KATEGORI[$this->kategori]['label'] ?? '-';
+    }
 
     public function transaksis(): HasMany
     {

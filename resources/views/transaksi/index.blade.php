@@ -6,6 +6,15 @@
 @section('content')
 <x-filter-periode>
     <div class="col-6 col-md-3 col-xl-2">
+        <label class="form-label small text-muted mb-1">Kategori Klien</label>
+        <select name="kategori" class="form-select form-select-sm">
+            <option value="">Semua</option>
+            @foreach (\App\Models\Klien::KATEGORI as $val => $k)
+                <option value="{{ $val }}" @selected(request('kategori') === $val)>{{ $k['label'] }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
         <label class="form-label small text-muted mb-1">Klien</label>
         <select name="klien_id" class="form-select form-select-sm">
             <option value="">Semua</option>
@@ -97,7 +106,7 @@
                         <tr>
                             <td><a href="{{ route('transaksi.show', $t) }}" class="fw-semibold text-decoration-none">{{ $t->no_nota }}</a></td>
                             <td class="text-nowrap">{{ tanggal($t->tanggal) }}</td>
-                            <td>{{ $t->klien->nama }}</td>
+                            <td>{{ $t->klien->nama }} <x-kategori-badge :kategori="$t->klien->kategori" class="ms-1" /></td>
                             <td class="num">{{ $t->details_count }}</td>
                             <td class="num fw-semibold">{{ rupiah($t->total_jual) }}</td>
                             <td class="num text-muted">{{ rupiah($t->total_modal) }}</td>

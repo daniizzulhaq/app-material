@@ -24,11 +24,12 @@ class LaporanController extends Controller
     public function klien(Request $request): Response|View
     {
         [$dari, $sampai] = $this->periode($request);
-        $data = $this->laporan->klien($dari, $sampai, $request->integer('klien_id') ?: null);
+        $data = $this->laporan->klien($dari, $sampai, $request->integer('klien_id') ?: null, $request->input('kategori'));
+        $judul = 'Laporan Per Klien' . ($data['kategori'] ? ' ' . Klien::KATEGORI[$data['kategori']]['label'] : '');
 
-        return $this->tampilkan($request, 'klien', 'Laporan Per Klien', $data + [
+        return $this->tampilkan($request, 'klien', $judul, $data + [
             'dari' => $dari, 'sampai' => $sampai,
-            'kliens' => Klien::orderBy('nama')->get(['id', 'nama']),
+            'kliens' => Klien::kategori($data['kategori'])->orderBy('nama')->get(['id', 'nama', 'kategori']),
         ]);
     }
 

@@ -21,6 +21,7 @@
     <div class="sub">
         {{ config('app.name') }} · Periode {{ tanggal($dari) }} – {{ tanggal($sampai) }}
         @isset($klien) @if ($klien) · Klien: {{ $klien->nama }} @endif @endisset
+        @if (! empty($kategori)) · Kategori: Klien {{ \App\Models\Klien::KATEGORI[$kategori]['label'] }} @endif
         @isset($supplier) @if ($supplier) · Supplier: {{ $supplier->nama }} @endif @endisset
         @isset($barang) @if ($barang) · Barang: {{ $barang->nama }} @endif @endisset
     </div>
