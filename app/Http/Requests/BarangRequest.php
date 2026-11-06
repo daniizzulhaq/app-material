@@ -19,6 +19,7 @@ class BarangRequest extends FormRequest
 
         $rules = [
             'nama' => ['required', 'string', 'max:150'],
+            'supplier_id' => ['nullable', 'exists:suppliers,id'],
             'satuan' => ['required', 'string', 'max:20'],
             'harga_jual_default' => ['required', 'numeric', 'min:0', 'max:9999999999999'],
             'stok_minimum' => ['required', 'numeric', 'min:0', 'max:9999999999'],

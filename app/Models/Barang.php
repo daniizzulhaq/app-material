@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Barang extends Model
@@ -13,7 +14,13 @@ class Barang extends Model
     public const SATUAN = ['sak', 'm3', 'batang', 'kg', 'pcs', 'dus', 'lembar', 'liter', 'meter', 'roll', 'kaleng', 'truk', 'set'];
 
     // stok & hpp sengaja tidak fillable: hanya diubah lewat StokService
-    protected $fillable = ['nama', 'satuan', 'harga_jual_default', 'stok_minimum'];
+    protected $fillable = ['nama', 'supplier_id', 'satuan', 'harga_jual_default', 'stok_minimum'];
+
+    /** Supplier langganan (opsional) */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
 
     protected function casts(): array
     {

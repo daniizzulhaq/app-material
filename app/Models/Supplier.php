@@ -11,6 +11,11 @@ class Supplier extends Model
 
     protected $fillable = ['nama', 'no_hp', 'alamat', 'keterangan'];
 
+    public function barangs(): HasMany
+    {
+        return $this->hasMany(Barang::class);
+    }
+
     public function pembelianStoks(): HasMany
     {
         return $this->hasMany(PembelianStok::class);

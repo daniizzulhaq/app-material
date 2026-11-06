@@ -193,6 +193,9 @@ class RiwayatService
 
     private function pulihkanBarang(array $d): string
     {
+        if (! empty($d['supplier_id']) && ! Supplier::whereKey($d['supplier_id'])->exists()) {
+            $d['supplier_id'] = null; // supplier langganannya sudah dihapus
+        }
         $barang = $this->buatDenganIdLama(Barang::class, $d);
         $this->stok->stokAwal($barang, (float) ($d['stok_awal'] ?? 0), (float) ($d['hpp_awal'] ?? 0));
 

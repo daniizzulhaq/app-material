@@ -123,10 +123,11 @@ class TransaksiController extends Controller
             ? $transaksi->details->where('sumber', 'stok')->groupBy('barang_id')->map(fn ($g) => (float) $g->sum('qty'))
             : collect();
 
-        $barangs = Barang::orderBy('nama')->get(['id', 'nama', 'satuan', 'stok', 'hpp', 'harga_jual_default'])
+        $barangs = Barang::orderBy('nama')->get(['id', 'nama', 'supplier_id', 'satuan', 'stok', 'hpp', 'harga_jual_default'])
             ->map(fn ($b) => [
                 'id' => $b->id,
                 'label' => $b->nama,
+                'supplier_id' => $b->supplier_id, // supplier langganan → auto-isi kolom supplier
                 'satuan' => $b->satuan,
                 'stok' => round((float) $b->stok + ($qtyNotaIni[$b->id] ?? 0), 2),
                 'hpp' => (float) $b->hpp,

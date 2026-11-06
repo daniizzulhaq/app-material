@@ -213,6 +213,18 @@
 
         const selectBarang = tr.querySelector('.pilih-barang');
         new TomSelect(selectBarang, { placeholder: 'Cari barang...', allowEmptyOption: true, dropdownParent: 'body', closeAfterSelect: true });
+        const selectSupplier = tr.querySelector('.pilih-supplier');
+        // Supplier langganan barang otomatis dipilih (selama belum diubah manual)
+        const isiSupplierOtomatis = () => {
+            const b = BARANG[selectBarang.value];
+            if (b && b.supplier_id && (selectSupplier.value === '' || selectSupplier.dataset.auto === '1')) {
+                selectSupplier.value = b.supplier_id;
+                selectSupplier.dataset.auto = '1';
+                selectSupplier.classList.remove('is-invalid');
+            }
+        };
+        selectSupplier.addEventListener('change', () => selectSupplier.dataset.auto = '0');
+
         selectBarang.addEventListener('change', () => {
             const b = BARANG[selectBarang.value];
             const jual = tr.querySelector('.input-jual');
@@ -220,11 +232,15 @@
                 jual.value = b.harga_jual || '';
                 jual.dataset.auto = '1';
             }
+            isiSupplierOtomatis();
             perbaruiBaris(tr);
         });
         tr.querySelector('.input-jual').addEventListener('input', (e) => e.target.dataset.auto = '0');
         tr.querySelector('.pilih-sumber').addEventListener('change', () => {
-            if (tr.querySelector('.pilih-sumber').value === 'supplier') tr.querySelector('.input-beli').value = '';
+            if (tr.querySelector('.pilih-sumber').value === 'supplier') {
+                tr.querySelector('.input-beli').value = '';
+                isiSupplierOtomatis();
+            }
             perbaruiBaris(tr);
         });
 

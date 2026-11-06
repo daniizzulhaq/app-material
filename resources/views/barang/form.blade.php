@@ -25,6 +25,23 @@
                             @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
+                        <div class="col-12">
+                            <label for="supplier_id" class="form-label">Supplier</label>
+                            <select id="supplier_id" name="supplier_id" class="tom-select @error('supplier_id') is-invalid @enderror" placeholder="Pilih supplier...">
+                                <option value="">— Tanpa supplier —</option>
+                                @foreach ($suppliers as $s)
+                                    <option value="{{ $s->id }}" @selected(old('supplier_id', $barang->supplier_id) == $s->id)>{{ $s->nama }}</option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">
+                                Supplier tempat barang ini biasa dibeli. Otomatis terisi saat barang dipilih di nota (sumber supplier).
+                                @if ($suppliers->isEmpty())
+                                    <a href="{{ route('supplier.create') }}">Tambah supplier dulu</a>.
+                                @endif
+                            </div>
+                            @error('supplier_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        </div>
+
                         <div class="col-md-4">
                             <label for="satuan" class="form-label">Satuan <span class="text-danger">*</span></label>
                             <input type="text" id="satuan" name="satuan" value="{{ old('satuan', $barang->satuan) }}" maxlength="20" list="daftar-satuan"

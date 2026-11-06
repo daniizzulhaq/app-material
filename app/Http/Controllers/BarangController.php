@@ -6,6 +6,7 @@ use App\Services\RiwayatService;
 use App\Http\Requests\BarangRequest;
 use App\Models\Barang;
 use App\Models\StokMutasi;
+use App\Models\Supplier;
 use App\Services\StokService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,20 +26,24 @@ class BarangController extends Controller
                 $q->where(fn ($w) => $w->where('nama', 'like', "%{$request->q}%"));
             })
             ->when($request->filled('satuan'), fn ($q) => $q->where('satuan', $request->satuan))
+            ->when($request->filled('supplier_id'), fn ($q) => $q->where('supplier_id', $request->supplier_id))
+            ->with('supplier:id,nama')
             ->orderBy('nama')
             ->paginate(15)
             ->withQueryString();
 
         $satuans = Barang::distinct()->orderBy('satuan')->pluck('satuan');
 
-        return view('barang.index', compact('barangs', 'satuans'));
+        $suppliers = Supplier::orderBy('nama')->get(['id', 'nama']);
+
+        return view('barang.index', compact('barangs', 'satuans', 'suppliers'));
     }
 
     public function create(): View
     {
         $barang = new Barang();
 
-        return view('barang.form', compact('barang'));
+        return view('barang.form', ['barang' => $barang, 'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama'])]);
     }
 
     public function store(BarangRequest $request): RedirectResponse
@@ -56,7 +61,7 @@ class BarangController extends Controller
 
     public function edit(Barang $barang): View
     {
-        return view('barang.form', compact('barang'));
+        return view('barang.form', ['barang' => $barang, 'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama'])]);
     }
 
     public function update(BarangRequest $request, Barang $barang): RedirectResponse

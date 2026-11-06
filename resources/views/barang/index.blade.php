@@ -14,13 +14,19 @@
                     <option value="{{ $s }}" @selected(request('satuan') === $s)>{{ $s }}</option>
                 @endforeach
             </select>
+            <select name="supplier_id" class="form-select form-select-sm" style="width: auto" onchange="this.form.submit()">
+                <option value="">Semua supplier</option>
+                @foreach ($suppliers as $s)
+                    <option value="{{ $s->id }}" @selected(request('supplier_id') == $s->id)>{{ $s->nama }}</option>
+                @endforeach
+            </select>
             <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>
         </form>
         <a href="{{ route('barang.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Barang</a>
     </div>
 
     @if ($barangs->isEmpty())
-        <x-empty-state icon="bi-box-seam" title="{{ request()->hasAny(['q', 'satuan']) ? 'Barang tidak ditemukan' : 'Belum ada barang' }}"
+        <x-empty-state icon="bi-box-seam" title="{{ request()->hasAny(['q', 'satuan', 'supplier_id']) ? 'Barang tidak ditemukan' : 'Belum ada barang' }}"
                        message="Daftarkan barang material yang Anda jual: semen, pasir, besi, dll.">
             <a href="{{ route('barang.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Tambah Barang</a>
         </x-empty-state>
@@ -30,6 +36,7 @@
                 <thead>
                     <tr>
                         <th>Nama</th>
+                        <th>Supplier</th>
                         <th>Satuan</th>
                         <th class="text-end">Harga Jual Default</th>
                         <th class="text-end">Stok</th>
@@ -42,6 +49,13 @@
                     @foreach ($barangs as $barang)
                         <tr>
                             <td class="fw-semibold">{{ $barang->nama }}</td>
+                            <td>
+                                @if ($barang->supplier)
+                                    <i class="bi bi-truck text-muted me-1"></i>{{ $barang->supplier->nama }}
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
                             <td>{{ $barang->satuan }}</td>
                             <td class="num">{{ rupiah($barang->harga_jual_default) }}</td>
                             <td class="num">

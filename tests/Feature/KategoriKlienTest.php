@@ -28,6 +28,33 @@ class KategoriKlienTest extends TestCase
         $this->assertDatabaseHas('kliens', ['nama' => 'Warung Bu Ani', 'kategori' => 'groceries']);
     }
 
+    public function test_barang_bisa_punya_supplier_langganan(): void
+    {
+        $supplier = Supplier::create(['nama' => 'CV Pasir Jaya']);
+
+        $this->post(route('barang.store'), [
+            'nama' => 'Pasir Beton', 'supplier_id' => $supplier->id, 'satuan' => 'm3', 'harga_jual_default' => 320000, 'stok_minimum' => 0,
+        ])->assertSessionHasNoErrors();
+        $this->post(route('barang.store'), [
+            'nama' => 'Tanpa Supplier', 'satuan' => 'pcs', 'harga_jual_default' => 1000, 'stok_minimum' => 0,
+        ])->assertSessionHasNoErrors();
+        $this->post(route('barang.store'), [
+            'nama' => 'Salah', 'supplier_id' => 999, 'satuan' => 'pcs', 'harga_jual_default' => 1000, 'stok_minimum' => 0,
+        ])->assertSessionHasErrors('supplier_id');
+
+        $this->assertDatabaseHas('barangs', ['nama' => 'Pasir Beton', 'supplier_id' => $supplier->id]);
+        $this->get(route('barang.index', ['supplier_id' => $supplier->id]))
+            ->assertOk()->assertSee('Pasir Beton')->assertDontSee('Tanpa Supplier');
+        $this->get(route('barang.edit', Barang::where('nama', 'Pasir Beton')->first()))->assertOk()->assertSee('CV Pasir Jaya');
+
+        // Data supplier langganan dikirim ke form nota untuk auto-isi
+        $this->get(route('transaksi.create'))->assertOk()->assertSee('"supplier_id":' . $supplier->id, false);
+
+        // Supplier dihapus → barang tetap ada, supplier-nya kosong
+        $this->delete(route('supplier.destroy', $supplier))->assertSessionHas('success');
+        $this->assertDatabaseHas('barangs', ['nama' => 'Pasir Beton', 'supplier_id' => null]);
+    }
+
     public function test_laporan_klien_bisa_difilter_per_kategori(): void
     {
         $supplier = Supplier::create(['nama' => 'UD Test']);
