@@ -36,5 +36,6 @@
     </tfoot>
 </table>
 @unless ($excel)
-    <p class="small text-muted px-3 py-2 mb-0">Belanja langsung dari nota dianggap dibayar pada hari yang sama (tercatat otomatis di cashflow "Belanja Supplier"). Sisa hutang berasal dari pembelian stok dengan metode hutang.</p>
+    <p class="small text-muted px-3 py-2 mb-0">Belanja langsung = item nota dari supplier, dibayar lewat menu Pembayaran (per supplier per tanggal nota). Pembelian stok tunai langsung lunas; metode hutang dibayar lewat Pembayaran.
+        @if (! empty($filterKlien)) <br>Filter klien aktif: hanya belanja dari nota klien terpilih (pembelian stok tidak dihitung); pembayaran per tanggal dibagi sesuai porsi belanja klien tsb. @endif</p>
 @endunless

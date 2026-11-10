@@ -37,7 +37,8 @@ php artisan test
 | File | Tanggung jawab |
 |---|---|
 | `app/Services/StokService.php` | Mutasi stok, HPP rata-rata tertimbang, saldo berjalan kartu stok, stok opname |
-| `app/Services/CashflowService.php` | Baris cashflow otomatis (pembelian tunai, belanja supplier harian, pembayaran) |
+| `app/Services/CashflowService.php` | Baris cashflow otomatis (pembelian tunai, pembayaran) |
+| `app/Services/TagihanSupplierService.php` | Tagihan supplier: nominal nota per tanggal & faktur hutang |
 | `app/Services/PembelianStokService.php` | Simpan/edit/hapus pembelian stok |
 | `app/Services/TransaksiService.php` | Simpan/edit/hapus nota penjualan |
 | `app/Observers/PembayaranObserver.php` | Sinkron cashflow & status bayar saat pembayaran dibuat/diubah/dihapus |
@@ -47,5 +48,6 @@ Prinsip: **cashflow** = kapan uang keluar/masuk; **laba** = jual − modal baran
 
 - Setiap perubahan stok ditulis sebagai baris `stok_mutasis`, lalu `StokService::hitungUlang()` memutar ulang mutasi barang (urut tanggal) untuk mendapatkan stok, HPP, dan saldo berjalan. Edit/hapus dokumen lama (termasuk yang bertanggal mundur) jadi selalu konsisten. Proses ditolak bila stok akhir menjadi minus.
 - Item nota dari stok memakai HPP saat nota diinput (terkunci; saat nota diedit, HPP lama dipertahankan).
-- Belanja supplier dari nota menjadi satu baris cashflow per tanggal (`referensi_id` = `Ymd`).
+- Belanja supplier dari nota (item sumber supplier) menjadi tagihan ke supplier, dibayar lewat menu Pembayaran per supplier per tanggal nota (`pembayarans.tanggal_nota`). Cashflow keluar tercatat saat pembayaran disimpan.
+- Barang master tidak otomatis masuk data stok; barang tampil di Stok setelah dibeli lewat Pembelian Stok.
 - Semua proses yang mengubah stok/cashflow berjalan di `DB::transaction()` dengan `lockForUpdate()` pada barang.

@@ -25,16 +25,23 @@ class LaporanService
     }
 
     /**
-     * Per klien. Jika klien dipilih → daftar nota klien tsb; jika tidak → rekap per klien.
+     * Per klien. Klien bisa dipilih lebih dari satu.
+     * Tepat 1 klien dipilih → daftar nota klien tsb; selain itu → rekap per klien (yang dipilih / semua).
+     * Filter supplier (bisa lebih dari satu) = hanya nota yang berisi barang dari supplier tsb.
+     *
+     * @param  int[]  $klienIds
+     * @param  int[]  $supplierIds
      */
-    public function klien(string $dari, string $sampai, ?int $klienId = null, ?string $kategori = null): array
+    public function klien(string $dari, string $sampai, array $klienIds = [], ?string $kategori = null, array $supplierIds = []): array
     {
         $kategori = array_key_exists((string) $kategori, Klien::KATEGORI) ? $kategori : null;
+        $klienId = count($klienIds) === 1 ? $klienIds[0] : null;
 
         $base = Transaksi::query()
             ->leftJoinSub($this->bayarPerNota(), 'bayar', 'bayar.transaksi_id', '=', 'transaksis.id')
             ->whereBetween('transaksis.tanggal', [$dari, $sampai])
-            ->when($klienId, fn ($q) => $q->where('transaksis.klien_id', $klienId))
+            ->when($klienIds, fn ($q) => $q->whereIn('transaksis.klien_id', $klienIds))
+            ->when($supplierIds, fn ($q) => $q->whereHas('details', fn ($d) => $d->whereIn('supplier_id', $supplierIds)))
             // Kategori klien: groceries / material
             ->when($kategori, fn ($q) => $q->whereIn('transaksis.klien_id', Klien::kategori($kategori)->select('id')));
 
@@ -82,26 +89,58 @@ class LaporanService
             'kategori' => $kategori,
             'total' => $this->jumlahkan($rows, ['jumlah_nota', 'total_jual', 'dibayar', 'sisa', 'laba']),
             // Subtotal per kategori (hanya saat rekap semua klien tanpa filter kategori)
-            'totalKategori' => ($klienId || $kategori) ? [] : collect(Klien::KATEGORI)->map(fn ($k, $val) => $this->jumlahkan(
+            'totalKategori' => ($klienIds || $kategori) ? [] : collect(Klien::KATEGORI)->map(fn ($k, $val) => $this->jumlahkan(
                 $rows->where('kategori', $val), ['jumlah_nota', 'total_jual', 'dibayar', 'sisa', 'laba']
             ))->all(),
         ];
     }
 
     /**
-     * Per supplier: belanja langsung (item nota sumber supplier) + pembelian stok.
-     * Belanja langsung dianggap lunas di hari itu (tercatat di cashflow belanja_supplier).
+     * Per supplier (bisa lebih dari satu): belanja langsung (item nota sumber supplier) + pembelian stok.
+     * Belanja langsung dibayar lewat menu Pembayaran per supplier per tanggal nota.
+     * Filter klien (bisa lebih dari satu): hanya belanja dari nota klien tsb; pembayaran per tanggal
+     * (gabungan semua klien) dibagi proporsional sesuai porsi belanja klien terpilih.
+     * Pembelian stok tidak terkait klien, jadi tidak dihitung saat filter klien aktif.
+     *
+     * @param  int[]  $supplierIds
+     * @param  int[]  $klienIds
      */
-    public function supplier(string $dari, string $sampai, ?int $supplierId = null): array
+    public function supplier(string $dari, string $sampai, array $supplierIds = [], array $klienIds = []): array
     {
-        $langsung = TransaksiDetail::query()
+        $belanjaHarian = fn (array $kliens) => TransaksiDetail::query()
             ->join('transaksis', 'transaksis.id', '=', 'transaksi_details.transaksi_id')
             ->where('transaksi_details.sumber', 'supplier')
             ->whereBetween('transaksis.tanggal', [$dari, $sampai])
-            ->when($supplierId, fn ($q) => $q->where('transaksi_details.supplier_id', $supplierId))
-            ->selectRaw('transaksi_details.supplier_id, SUM(transaksi_details.subtotal_beli) AS total')
-            ->groupBy('transaksi_details.supplier_id')
-            ->pluck('total', 'supplier_id');
+            ->when($supplierIds, fn ($q) => $q->whereIn('transaksi_details.supplier_id', $supplierIds))
+            ->when($kliens, fn ($q) => $q->whereIn('transaksis.klien_id', $kliens))
+            ->selectRaw('transaksi_details.supplier_id, transaksis.tanggal, SUM(transaksi_details.subtotal_beli) AS total')
+            ->groupBy('transaksi_details.supplier_id', 'transaksis.tanggal')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$r->supplier_id . '|' . substr((string) $r->tanggal, 0, 10) => (float) $r->total]);
+
+        $belanjaHari = $belanjaHarian($klienIds);
+        $semuaKlienHari = $klienIds ? $belanjaHarian([]) : $belanjaHari;
+
+        // Pembayaran belanja nota per tanggal nota (gabungan semua klien)
+        $bayarHari = Pembayaran::query()
+            ->where('jenis', 'supplier')
+            ->whereNotNull('tanggal_nota')
+            ->whereBetween('tanggal_nota', [$dari, $sampai])
+            ->when($supplierIds, fn ($q) => $q->whereIn('supplier_id', $supplierIds))
+            ->selectRaw('supplier_id, tanggal_nota, SUM(jumlah) AS total')
+            ->groupBy('supplier_id', 'tanggal_nota')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$r->supplier_id . '|' . substr((string) $r->tanggal_nota, 0, 10) => (float) $r->total]);
+
+        $langsung = [];
+        $bayarLangsung = [];
+        foreach ($belanjaHari as $key => $belanja) {
+            $id = (int) explode('|', $key)[0];
+            $semua = $semuaKlienHari[$key] ?? $belanja;
+            $langsung[$id] = ($langsung[$id] ?? 0) + $belanja;
+            $bayarLangsung[$id] = ($bayarLangsung[$id] ?? 0) + min($semua, $bayarHari[$key] ?? 0) * ($semua > 0 ? $belanja / $semua : 0);
+        }
+        $langsung = collect($langsung);
 
         $bayarHutang = Pembayaran::query()
             ->whereNotNull('pembelian_stok_id')
@@ -111,7 +150,8 @@ class LaporanService
         $pembelian = PembelianStok::query()
             ->leftJoinSub($bayarHutang, 'bayar', 'bayar.pembelian_stok_id', '=', 'pembelian_stoks.id')
             ->whereBetween('pembelian_stoks.tanggal', [$dari, $sampai])
-            ->when($supplierId, fn ($q) => $q->where('pembelian_stoks.supplier_id', $supplierId))
+            ->when($supplierIds, fn ($q) => $q->whereIn('pembelian_stoks.supplier_id', $supplierIds))
+            ->when($klienIds, fn ($q) => $q->whereRaw('1 = 0'))
             ->selectRaw("
                 pembelian_stoks.supplier_id,
                 SUM(pembelian_stoks.total) AS total,
@@ -124,10 +164,10 @@ class LaporanService
         $ids = collect($langsung->keys())->merge($pembelian->keys())->unique();
         $suppliers = Supplier::whereIn('id', $ids)->pluck('nama', 'id');
 
-        $rows = $ids->map(function ($id) use ($langsung, $pembelian, $suppliers) {
+        $rows = $ids->map(function ($id) use ($langsung, $bayarLangsung, $pembelian, $suppliers) {
             $belanja = (float) ($langsung[$id] ?? 0);
             $beliStok = (float) ($pembelian[$id]->total ?? 0);
-            $dibayar = $belanja + (float) ($pembelian[$id]->dibayar ?? 0);
+            $dibayar = round((float) ($bayarLangsung[$id] ?? 0), 2) + (float) ($pembelian[$id]->dibayar ?? 0);
 
             return (object) [
                 'nama' => $suppliers[$id] ?? '-',
@@ -141,18 +181,24 @@ class LaporanService
 
         return [
             'rows' => $rows,
-            'supplier' => $supplierId ? Supplier::find($supplierId) : null,
+            'supplier' => count($supplierIds) === 1 ? Supplier::find($supplierIds[0]) : null,
             'total' => $this->jumlahkan($rows, ['belanja_langsung', 'pembelian_stok', 'total', 'dibayar', 'sisa']),
+            'filterKlien' => (bool) $klienIds,
         ];
     }
 
-    /** Per barang: qty terjual (dari supplier vs dari stok), modal, jual, laba */
-    public function barang(string $dari, string $sampai, ?int $barangId = null): array
+    /**
+     * Per barang: qty terjual (dari supplier vs dari stok), modal, jual, laba.
+     * Bisa difilter klien & supplier (masing-masing lebih dari satu).
+     */
+    public function barang(string $dari, string $sampai, ?int $barangId = null, array $klienIds = [], array $supplierIds = []): array
     {
         $agregat = TransaksiDetail::query()
             ->join('transaksis', 'transaksis.id', '=', 'transaksi_details.transaksi_id')
             ->whereBetween('transaksis.tanggal', [$dari, $sampai])
             ->when($barangId, fn ($q) => $q->where('transaksi_details.barang_id', $barangId))
+            ->when($klienIds, fn ($q) => $q->whereIn('transaksis.klien_id', $klienIds))
+            ->when($supplierIds, fn ($q) => $q->whereIn('transaksi_details.supplier_id', $supplierIds))
             ->selectRaw("
                 transaksi_details.barang_id,
                 SUM(CASE WHEN transaksi_details.sumber = 'supplier' THEN transaksi_details.qty ELSE 0 END) AS qty_supplier,
@@ -185,7 +231,7 @@ class LaporanService
     }
 
     /** Laporan stok: stok awal, masuk, keluar, penyesuaian, stok akhir, nilai stok akhir */
-    public function stok(string $dari, string $sampai): array
+    public function stok(string $dari, string $sampai, array $supplierIds = []): array
     {
         $mutasi = DB::table('stok_mutasis')
             ->selectRaw("
@@ -206,7 +252,8 @@ class LaporanService
             ->groupBy('barang_id')
             ->pluck('nilai', 'barang_id');
 
-        $rows = Barang::orderBy('nama')->get()->map(function ($b) use ($mutasi, $nilaiOpname) {
+        // Filter supplier = supplier barang (bisa lebih dari satu)
+        $rows = Barang::diStok()->when($supplierIds, fn ($q) => $q->whereIn('supplier_id', $supplierIds))->orderBy('nama')->get()->map(function ($b) use ($mutasi, $nilaiOpname) {
             $m = $mutasi[$b->id] ?? null;
             $awal = (float) ($m->stok_awal ?? 0);
             $masuk = (float) ($m->masuk ?? 0);

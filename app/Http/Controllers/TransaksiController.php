@@ -24,18 +24,22 @@ class TransaksiController extends Controller
 
     public function index(Request $request): View
     {
+        // Klien & supplier bisa dipilih lebih dari satu (?klien_id[]=1&klien_id[]=2)
+        $klienIds = ids($request->input('klien_id'));
+        $supplierIds = ids($request->input('supplier_id'));
+
         $query = Transaksi::query()
             ->when($request->filled('dari'), fn ($q) => $q->whereDate('tanggal', '>=', $request->dari))
             ->when($request->filled('sampai'), fn ($q) => $q->whereDate('tanggal', '<=', $request->sampai))
-            ->when($request->filled('klien_id'), fn ($q) => $q->where('klien_id', $request->klien_id))
+            ->when($klienIds, fn ($q) => $q->whereIn('klien_id', $klienIds))
             ->when(array_key_exists((string) $request->kategori, Klien::KATEGORI),
                 fn ($q) => $q->whereIn('klien_id', Klien::kategori($request->kategori)->select('id')))
             ->when($request->filled('status_bayar'), fn ($q) => $q->where('status_bayar', $request->status_bayar))
             ->when($request->filled('q'), fn ($q) => $q->where('no_nota', 'like', "%{$request->q}%"))
             // Filter berdasarkan isi item nota
-            ->when($request->filled('supplier_id') || $request->filled('barang_id') || $request->filled('sumber'), function ($q) use ($request) {
-                $q->whereHas('details', function ($d) use ($request) {
-                    $d->when($request->filled('supplier_id'), fn ($x) => $x->where('supplier_id', $request->supplier_id))
+            ->when($supplierIds || $request->filled('barang_id') || $request->filled('sumber'), function ($q) use ($request, $supplierIds) {
+                $q->whereHas('details', function ($d) use ($request, $supplierIds) {
+                    $d->when($supplierIds, fn ($x) => $x->whereIn('supplier_id', $supplierIds))
                         ->when($request->filled('barang_id'), fn ($x) => $x->where('barang_id', $request->barang_id))
                         ->when($request->filled('sumber'), fn ($x) => $x->where('sumber', $request->sumber));
                 });
@@ -54,6 +58,8 @@ class TransaksiController extends Controller
             'kliens' => Klien::kategori($request->kategori)->orderBy('nama')->get(['id', 'nama']),
             'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama']),
             'barangs' => Barang::orderBy('nama')->get(['id', 'nama']),
+            'klienIds' => $klienIds,
+            'supplierIds' => $supplierIds,
         ]);
     }
 
@@ -123,15 +129,22 @@ class TransaksiController extends Controller
             ? $transaksi->details->where('sumber', 'stok')->groupBy('barang_id')->map(fn ($g) => (float) $g->sum('qty'))
             : collect();
 
-        $barangs = Barang::orderBy('nama')->get(['id', 'nama', 'supplier_id', 'satuan', 'stok', 'hpp', 'harga_jual_default'])
+        // Barang yang ada di data stok (pernah dibeli lewat pembelian stok)
+        $idDiStok = Barang::diStok()->pluck('id')->flip();
+
+        $barangs = Barang::with('supplier:id,nama')->orderBy('nama')
+            ->get(['id', 'nama', 'supplier_id', 'satuan', 'stok', 'hpp', 'harga_jual_default', 'harga_beli_default'])
             ->map(fn ($b) => [
                 'id' => $b->id,
                 'label' => $b->nama,
-                'supplier_id' => $b->supplier_id, // supplier langganan → auto-isi kolom supplier
+                'supplier_id' => $b->supplier_id, // supplier barang → otomatis mengisi kolom supplier
+                'supplier' => $b->supplier?->nama,
                 'satuan' => $b->satuan,
+                'di_stok' => isset($idDiStok[$b->id]) || isset($qtyNotaIni[$b->id]),
                 'stok' => round((float) $b->stok + ($qtyNotaIni[$b->id] ?? 0), 2),
                 'hpp' => (float) $b->hpp,
                 'harga_jual' => (float) $b->harga_jual_default,
+                'harga_beli' => (float) $b->harga_beli_default,
             ]);
 
         return [

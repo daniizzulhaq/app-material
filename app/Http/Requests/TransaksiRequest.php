@@ -2,13 +2,40 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalisasiAngka;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TransaksiRequest extends FormRequest
 {
+    use NormalisasiAngka;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Harga diketik dengan titik ribuan ("64.000"), qty boleh koma ("2,5").
+     * Baris yang benar-benar kosong (barang belum dipilih & tanpa angka) diabaikan.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! is_array($this->input('items'))) {
+            return;
+        }
+
+        $items = collect($this->input('items'))
+            ->filter(fn ($i) => is_array($i))
+            ->reject(fn ($i) => blank($i['barang_id'] ?? null) && blank($i['qty'] ?? null)
+                && blank($i['harga_jual'] ?? null) && blank($i['harga_beli'] ?? null))
+            ->map(fn ($i) => array_merge($i, [
+                'qty' => $this->desimal($i['qty'] ?? null),
+                'harga_beli' => $this->uang($i['harga_beli'] ?? null),
+                'harga_jual' => $this->uang($i['harga_jual'] ?? null),
+            ]))
+            ->all();
+
+        $this->merge(['items' => $items]);
     }
 
     public function rules(): array

@@ -50,8 +50,8 @@
                         <label for="nominal" class="form-label">Nominal <span class="text-danger">*</span></label>
                         <div class="input-group has-validation">
                             <span class="input-group-text">Rp</span>
-                            <input type="number" id="nominal" name="nominal" min="0" step="any" value="{{ old('nominal', $edit ? (float) $cashflow->nominal : '') }}"
-                                   class="form-control text-end @error('nominal') is-invalid @enderror" required>
+                            <input type="text" id="nominal" name="nominal" inputmode="numeric" autocomplete="off" value="{{ old('nominal', $edit ? input_uang($cashflow->nominal) : '') }}"
+                                   class="form-control text-end input-uang @error('nominal') is-invalid @enderror" placeholder="0" required>
                             @error('nominal') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>

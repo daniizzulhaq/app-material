@@ -14,7 +14,7 @@ class Barang extends Model
     public const SATUAN = ['sak', 'm3', 'batang', 'kg', 'pcs', 'dus', 'lembar', 'liter', 'meter', 'roll', 'kaleng', 'truk', 'set'];
 
     // stok & hpp sengaja tidak fillable: hanya diubah lewat StokService
-    protected $fillable = ['nama', 'supplier_id', 'satuan', 'harga_jual_default', 'stok_minimum'];
+    protected $fillable = ['nama', 'supplier_id', 'satuan', 'harga_jual_default', 'harga_beli_default', 'stok_minimum'];
 
     /** Supplier langganan (opsional) */
     public function supplier(): BelongsTo
@@ -26,6 +26,7 @@ class Barang extends Model
     {
         return [
             'harga_jual_default' => 'decimal:2',
+            'harga_beli_default' => 'decimal:2',
             'stok' => 'decimal:2',
             'hpp' => 'decimal:2',
             'stok_minimum' => 'decimal:2',
@@ -64,7 +65,16 @@ class Barang extends Model
 
     public function scopeMenipis(Builder $query): Builder
     {
-        return $query->whereColumn('stok', '<=', 'stok_minimum');
+        return $query->diStok()->whereColumn('stok', '<=', 'stok_minimum');
+    }
+
+    /**
+     * Barang yang masuk data stok = pernah tercatat di kartu stok (pembelian stok / stok awal lama).
+     * Barang master yang belum pernah dibeli untuk stok tidak tampil di data stok.
+     */
+    public function scopeDiStok(Builder $query): Builder
+    {
+        return $query->whereHas('mutasis');
     }
 
     /** Dipakai = ada transaksi/pembelian/opname, atau mutasi selain stok awal */

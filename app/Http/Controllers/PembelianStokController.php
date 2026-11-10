@@ -89,7 +89,7 @@ class PembelianStokController extends Controller
             'pembelian' => $pembelian,
             'items' => $items, // indeks asli dipertahankan agar error validasi cocok per baris
             'suppliers' => Supplier::orderBy('nama')->get(['id', 'nama']),
-            'barangs' => Barang::orderBy('nama')->get(['id', 'nama', 'satuan', 'stok', 'hpp']),
+            'barangs' => Barang::orderBy('nama')->get(['id', 'nama', 'satuan', 'stok', 'hpp', 'harga_beli_default']),
         ];
     }
 }

@@ -27,14 +27,14 @@ class StokOpnameController extends Controller
 
         $totalNilai = (clone $query)->sum('nilai_selisih');
         $opnames = $query->latest('tanggal')->latest('id')->paginate(15)->withQueryString();
-        $barangs = Barang::orderBy('nama')->get(['id', 'nama']);
+        $barangs = Barang::diStok()->orderBy('nama')->get(['id', 'nama']);
 
         return view('stok-opname.index', compact('opnames', 'barangs', 'totalNilai'));
     }
 
     public function create(Request $request): View
     {
-        $barangs = Barang::orderBy('nama')->get(['id', 'nama', 'satuan', 'stok', 'hpp']);
+        $barangs = Barang::diStok()->orderBy('nama')->get(['id', 'nama', 'satuan', 'stok', 'hpp']);
 
         return view('stok-opname.form', [
             'barangs' => $barangs,

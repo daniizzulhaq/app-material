@@ -130,13 +130,15 @@ class RiwayatService
     private function snapshotPembayaran(Pembayaran $p): array
     {
         $p->loadMissing(['transaksi', 'pembelianStok', 'klien', 'supplier']);
-        $dokumen = $p->jenis === 'klien' ? ($p->transaksi->no_nota ?? '-') : ($p->pembelianStok->no_faktur ?? '-');
         $pihak = $p->jenis === 'klien' ? ($p->klien->nama ?? '-') : ($p->supplier->nama ?? '-');
 
         return [
-            'jenis' => 'pembayaran', 'label' => 'Bayar ' . $dokumen . ' · ' . rupiah($p->jumlah),
+            'jenis' => 'pembayaran', 'label' => 'Bayar ' . $p->dokumen . ' · ' . rupiah($p->jumlah),
             'ringkasan' => tanggal($p->tanggal) . ' · ' . $pihak,
-            'data' => array_merge($p->only($p->getFillable()), ['tanggal' => $p->tanggal->toDateString()]),
+            'data' => array_merge($p->only($p->getFillable()), [
+                'tanggal' => $p->tanggal->toDateString(),
+                'tanggal_nota' => $p->tanggal_nota?->toDateString(),
+            ]),
         ];
     }
 
@@ -249,6 +251,22 @@ class RiwayatService
 
     private function pulihkanPembayaran(array $d): string
     {
+        if ($d['jenis'] === 'supplier' && ! empty($d['tanggal_nota'])) {
+            // Pembayaran belanja nota supplier per tanggal
+            $this->wajibAda(Supplier::class, $d['supplier_id'], 'Supplier pembayaran ini sudah dihapus. Pulihkan supplier-nya dulu.');
+            $tagihan = app(TagihanSupplierService::class)->tanggal((int) $d['supplier_id'], $d['tanggal_nota']);
+            if (! $tagihan) {
+                throw new BisnisException('Nota supplier pada tanggal pembayaran ini sudah dihapus. Pulihkan notanya dulu.');
+            }
+            if ((float) $d['jumlah'] > $tagihan->sisa + 0.001) {
+                throw new BisnisException('Tidak bisa dipulihkan: jumlah ' . rupiah($d['jumlah']) . ' melebihi sisa tagihan (' . rupiah($tagihan->sisa) . ').');
+            }
+
+            Pembayaran::create($d);
+
+            return 'Pembayaran ' . rupiah($d['jumlah']) . ' berhasil dipulihkan.';
+        }
+
         if ($d['jenis'] === 'klien') {
             $tagihan = Transaksi::lockForUpdate()->find($d['transaksi_id']);
             $total = $tagihan?->total_jual;

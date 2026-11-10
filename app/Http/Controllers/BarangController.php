@@ -7,18 +7,12 @@ use App\Http\Requests\BarangRequest;
 use App\Models\Barang;
 use App\Models\StokMutasi;
 use App\Models\Supplier;
-use App\Services\StokService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class BarangController extends Controller
 {
-    public function __construct(private StokService $stok)
-    {
-    }
-
     public function index(Request $request): View
     {
         $barangs = Barang::query()
@@ -48,13 +42,8 @@ class BarangController extends Controller
 
     public function store(BarangRequest $request): RedirectResponse
     {
-        $barang = DB::transaction(function () use ($request) {
-            $barang = Barang::create($request->safe()->except(['stok_awal', 'hpp_awal']));
-            // Stok awal dicatat sebagai mutasi masuk agar kartu stok & HPP konsisten
-            $this->stok->stokAwal($barang, (float) $request->stok_awal, (float) $request->hpp_awal);
-
-            return $barang;
-        });
+        // Hanya data master; stok baru bertambah lewat Pembelian Stok
+        $barang = Barang::create($request->validated());
 
         return redirect()->route('barang.index')->with('success', "Barang {$barang->nama} berhasil ditambahkan.");
     }

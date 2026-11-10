@@ -11,7 +11,8 @@ class StokController extends Controller
     /** Daftar stok + nilai stok */
     public function index(Request $request): View
     {
-        $query = Barang::query()
+        // Hanya barang yang sudah masuk stok lewat pembelian stok (bukan semua master barang)
+        $query = Barang::diStok()
             ->when($request->filled('q'), fn ($q) => $q->where('nama', 'like', "%{$request->q}%"))
             ->when($request->boolean('menipis'), fn ($q) => $q->menipis());
 

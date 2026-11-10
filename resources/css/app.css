@@ -323,3 +323,12 @@ code { color: #555a6e; background: #f1f2f6; padding: .1rem .35rem; border-radius
 .auth-feature i { color: var(--primary); font-size: 1.2rem; }
 .auth-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
 .auth-card { width: 100%; max-width: 400px; }
+
+/* Tanpa panah atas-bawah pada input angka */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Tom Select multi (filter klien/supplier) di filter berukuran kecil */
+.ts-wrapper.multi .ts-control { min-height: calc(1.5em + .5rem + 2px); padding: .15rem .35rem; font-size: .875rem; }
+.ts-wrapper.multi .ts-control > .item { padding: 0 .35rem; margin: .1rem .15rem; font-size: .8rem; }

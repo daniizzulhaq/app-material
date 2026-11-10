@@ -13,6 +13,14 @@
             <option value="supplier" @selected(request('jenis') === 'supplier')>Ke Supplier</option>
         </select>
     </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <label class="form-label small text-muted mb-1" for="f-supplier">Supplier <span class="fw-normal">· bisa pilih beberapa</span></label>
+        <select id="f-supplier" name="supplier_id[]" multiple class="tom-select" placeholder="Semua supplier">
+            @foreach ($suppliers as $s)
+                <option value="{{ $s->id }}" @selected(in_array($s->id, ids(request('supplier_id'))))>{{ $s->nama }}</option>
+            @endforeach
+        </select>
+    </div>
     <div class="col-6 col-md-3 col-xl-2">
         <label class="form-label small text-muted mb-1">Metode</label>
         <select name="metode" class="form-select form-select-sm">
@@ -36,7 +44,7 @@
 
     @if ($pembayarans->isEmpty())
         <x-empty-state icon="bi-credit-card" title="Belum ada pembayaran"
-                       message="Catat pembayaran dari klien (pelunasan nota) atau ke supplier (pelunasan hutang pembelian stok)." />
+                       message="Catat pembayaran dari klien (pelunasan nota) atau ke supplier (nominal nota per hari / hutang pembelian stok)." />
     @else
         <div class="table-responsive">
             <table class="table table-hover align-middle">
@@ -67,6 +75,9 @@
                             <td>
                                 @if ($p->transaksi)
                                     <a href="{{ route('transaksi.show', $p->transaksi) }}" class="text-decoration-none">{{ $p->transaksi->no_nota }}</a>
+                                @elseif ($p->tanggal_nota)
+                                    <a href="{{ route('transaksi.index', ['dari' => $p->tanggal_nota->toDateString(), 'sampai' => $p->tanggal_nota->toDateString(), 'supplier_id' => [$p->supplier_id]]) }}"
+                                       class="text-decoration-none" title="Lihat nota tanggal ini">{{ $p->dokumen }}</a>
                                 @elseif ($p->pembelianStok)
                                     <a href="{{ route('pembelian-stok.show', $p->pembelianStok) }}" class="text-decoration-none">{{ $p->pembelianStok->no_faktur }}</a>
                                 @else - @endif

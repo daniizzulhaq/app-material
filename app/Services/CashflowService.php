@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Cashflow;
 use App\Models\Pembayaran;
 use App\Models\PembelianStok;
-use App\Models\TransaksiDetail;
 use Carbon\Carbon;
 
 /**
@@ -16,7 +15,6 @@ use Carbon\Carbon;
 class CashflowService
 {
     public const REF_PEMBELIAN = 'pembelian_stok';
-    public const REF_BELANJA_HARIAN = 'belanja_supplier';
     public const REF_PEMBAYARAN = 'pembayaran';
 
     public function simpanOtomatis(string $referensiTipe, int $referensiId, array $data): Cashflow
@@ -57,42 +55,15 @@ class CashflowService
         $this->hapusOtomatis(self::REF_PEMBELIAN, $pembelian->id);
     }
 
-    /**
-     * Satu baris cashflow per tanggal = Σ subtotal_beli item sumber supplier pada tanggal tsb.
-     * referensi_id memakai format Ymd (20261106) agar unik per hari.
-     */
-    public function syncBelanjaSupplier($tanggal): void
-    {
-        $tgl = Carbon::parse($tanggal)->toDateString();
-        $refId = (int) str_replace('-', '', $tgl);
-
-        $total = (float) TransaksiDetail::query()
-            ->where('sumber', 'supplier')
-            ->whereHas('transaksi', fn ($q) => $q->whereDate('tanggal', $tgl))
-            ->sum('subtotal_beli');
-
-        if ($total <= 0) {
-            $this->hapusOtomatis(self::REF_BELANJA_HARIAN, $refId);
-
-            return;
-        }
-
-        $this->simpanOtomatis(self::REF_BELANJA_HARIAN, $refId, [
-            'tanggal' => $tgl,
-            'tipe' => 'keluar',
-            'kategori' => 'belanja_supplier',
-            'nominal' => round($total, 2),
-            'keterangan' => 'Belanja supplier harian ' . tanggal($tgl),
-        ]);
-    }
-
     /** Dipanggil oleh PembayaranObserver */
     public function syncPembayaran(Pembayaran $pembayaran): void
     {
         $pembayaran->loadMissing(['transaksi', 'pembelianStok', 'klien', 'supplier']);
         $klien = $pembayaran->jenis === 'klien';
 
-        $dokumen = $klien ? $pembayaran->transaksi?->no_nota : $pembayaran->pembelianStok?->no_faktur;
+        $dokumen = $klien
+            ? $pembayaran->transaksi?->no_nota
+            : ($pembayaran->tanggal_nota ? 'nota ' . $pembayaran->tanggal_nota->format('d/m/Y') : $pembayaran->pembelianStok?->no_faktur);
         $nama = $klien ? $pembayaran->klien?->nama : $pembayaran->supplier?->nama;
 
         $this->simpanOtomatis(self::REF_PEMBAYARAN, $pembayaran->id, [

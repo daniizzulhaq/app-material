@@ -21,12 +21,12 @@
                         <div class="col-12">
                             <label for="nama" class="form-label">Nama Barang <span class="text-danger">*</span></label>
                             <input type="text" id="nama" name="nama" value="{{ old('nama', $barang->nama) }}" maxlength="150"
-                                   class="form-control @error('nama') is-invalid @enderror" placeholder="cth. Semen Gresik 40kg" required autofocus>
+                                   class="form-control @error('nama') is-invalid @enderror" placeholder="cth. Gula Pasir 1kg" required autofocus>
                             @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-12">
-                            <label for="supplier_id" class="form-label">Supplier</label>
+                        <div class="col-md-8">
+                            <label for="supplier_id" class="form-label">Nama Supplier</label>
                             <select id="supplier_id" name="supplier_id" class="tom-select @error('supplier_id') is-invalid @enderror" placeholder="Pilih supplier...">
                                 <option value="">— Tanpa supplier —</option>
                                 @foreach ($suppliers as $s)
@@ -34,7 +34,7 @@
                                 @endforeach
                             </select>
                             <div class="form-text">
-                                Supplier tempat barang ini biasa dibeli. Otomatis terisi saat barang dipilih di nota (sumber supplier).
+                                Otomatis terisi saat barang dipilih di nota.
                                 @if ($suppliers->isEmpty())
                                     <a href="{{ route('supplier.create') }}">Tambah supplier dulu</a>.
                                 @endif
@@ -45,60 +45,44 @@
                         <div class="col-md-4">
                             <label for="satuan" class="form-label">Satuan <span class="text-danger">*</span></label>
                             <input type="text" id="satuan" name="satuan" value="{{ old('satuan', $barang->satuan) }}" maxlength="20" list="daftar-satuan"
-                                   class="form-control @error('satuan') is-invalid @enderror" placeholder="sak / m3 / batang..." required>
+                                   class="form-control @error('satuan') is-invalid @enderror" placeholder="kg / pcs / dus..." required>
                             <datalist id="daftar-satuan">
                                 @foreach (\App\Models\Barang::SATUAN as $s) <option value="{{ $s }}"> @endforeach
                             </datalist>
                             @error('satuan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                        <div class="col-md-4">
-                            <label for="harga_jual_default" class="form-label">Harga Jual Default <span class="text-danger">*</span></label>
+
+                        <div class="col-md-6">
+                            <label for="harga_jual_default" class="form-label">Harga Jual <span class="text-danger">*</span></label>
                             <div class="input-group has-validation">
                                 <span class="input-group-text">Rp</span>
-                                <input type="number" id="harga_jual_default" name="harga_jual_default" min="0" step="any"
-                                       value="{{ old('harga_jual_default', $edit ? (float) $barang->harga_jual_default : '') }}"
-                                       class="form-control text-end @error('harga_jual_default') is-invalid @enderror" required>
+                                <input type="text" id="harga_jual_default" name="harga_jual_default" inputmode="numeric" autocomplete="off"
+                                       value="{{ old('harga_jual_default', $edit ? input_uang($barang->harga_jual_default) : '') }}"
+                                       class="form-control text-end input-uang @error('harga_jual_default') is-invalid @enderror" placeholder="0" required>
                                 @error('harga_jual_default') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label for="stok_minimum" class="form-label">Stok Minimum <span class="text-danger">*</span></label>
-                            <input type="number" id="stok_minimum" name="stok_minimum" min="0" step="any"
-                                   value="{{ old('stok_minimum', $edit ? (float) $barang->stok_minimum : 0) }}"
-                                   class="form-control text-end @error('stok_minimum') is-invalid @enderror" required>
-                            <div class="form-text">Badge "Menipis" muncul jika stok ≤ nilai ini.</div>
-                            @error('stok_minimum') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="col-md-6">
+                            <label for="harga_beli_default" class="form-label">Harga Beli</label>
+                            <div class="input-group has-validation">
+                                <span class="input-group-text">Rp</span>
+                                <input type="text" id="harga_beli_default" name="harga_beli_default" inputmode="numeric" autocomplete="off"
+                                       value="{{ old('harga_beli_default', $edit ? input_uang($barang->harga_beli_default) : '') }}"
+                                       class="form-control text-end input-uang @error('harga_beli_default') is-invalid @enderror" placeholder="0">
+                                @error('harga_beli_default') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="form-text">Otomatis terisi di nota untuk barang dari supplier.</div>
                         </div>
                     </div>
 
-                    @if ($edit)
-                        <div class="alert alert-light border mt-4 mb-0 d-flex gap-3 flex-wrap">
-                            <div><small class="text-muted d-block">Stok saat ini</small><strong>{{ qty($barang->stok) }} {{ $barang->satuan }}</strong></div>
-                            <div><small class="text-muted d-block">HPP rata-rata</small><strong>{{ rupiah($barang->hpp) }}</strong></div>
-                            <div class="small text-muted align-self-center">Stok & HPP berubah otomatis lewat Pembelian Stok, Nota, dan Stok Opname.</div>
-                        </div>
-                    @else
-                        <hr class="my-4">
-                        <h6 class="fw-semibold mb-1">Stok Awal <span class="text-muted fw-normal small">(opsional)</span></h6>
-                        <p class="small text-muted mb-3">Isi jika barang ini sudah ada di gudang. Akan tercatat di kartu stok sebagai "Stok Awal".</p>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="stok_awal" class="form-label">Qty Stok Awal</label>
-                                <input type="number" id="stok_awal" name="stok_awal" min="0" step="any" value="{{ old('stok_awal') }}"
-                                       class="form-control text-end @error('stok_awal') is-invalid @enderror" placeholder="0">
-                                @error('stok_awal') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label for="hpp_awal" class="form-label">HPP / Harga Beli per Satuan</label>
-                                <div class="input-group has-validation">
-                                    <span class="input-group-text">Rp</span>
-                                    <input type="number" id="hpp_awal" name="hpp_awal" min="0" step="any" value="{{ old('hpp_awal') }}"
-                                           class="form-control text-end @error('hpp_awal') is-invalid @enderror" placeholder="0">
-                                    @error('hpp_awal') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+                    <div class="alert alert-light border small mt-4 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Barang ini <strong>tidak otomatis masuk Data Stok</strong>. Stok hanya bertambah lewat
+                        <a href="{{ route('pembelian-stok.create') }}">Pembelian Stok</a>.
+                        @if ($edit && $barang->mutasis()->exists())
+                            <span class="d-block mt-1">Stok saat ini <strong>{{ qty($barang->stok) }} {{ $barang->satuan }}</strong> · HPP rata-rata <strong>{{ rupiah($barang->hpp) }}</strong></span>
+                        @endif
+                    </div>
 
                     <div class="d-flex gap-2 justify-content-end mt-4">
                         <a href="{{ route('barang.index') }}" class="btn btn-light">Batal</a>

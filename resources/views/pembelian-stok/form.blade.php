@@ -76,7 +76,7 @@
                                 <select name="items[{{ $i }}][barang_id]" class="pilih-barang @error("items.$i.barang_id") is-invalid @enderror" placeholder="Cari barang...">
                                     <option value="">Cari barang...</option>
                                     @foreach ($barangs as $b)
-                                        <option value="{{ $b->id }}" data-satuan="{{ $b->satuan }}" data-hpp="{{ (float) $b->hpp }}" @selected(($item['barang_id'] ?? null) == $b->id)>{{ $b->nama }}</option>
+                                        <option value="{{ $b->id }}" data-satuan="{{ $b->satuan }}" data-hpp="{{ (float) $b->hpp }}" data-beli="{{ (float) $b->harga_beli_default }}" @selected(($item['barang_id'] ?? null) == $b->id)>{{ $b->nama }}</option>
                                     @endforeach
                                 </select>
                                 @error("items.$i.barang_id") <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
@@ -93,8 +93,8 @@
                             <td data-label="Harga Beli">
                                 <div class="input-group input-group-sm has-validation">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" name="items[{{ $i }}][harga_beli]" value="{{ filled($item['harga_beli'] ?? null) ? (float) $item['harga_beli'] : '' }}" min="0" step="any"
-                                           class="form-control text-end input-harga @error("items.$i.harga_beli") is-invalid @enderror">
+                                    <input type="text" name="items[{{ $i }}][harga_beli]" value="{{ filled($item['harga_beli'] ?? null) ? input_uang($item['harga_beli']) : '' }}" inputmode="numeric" autocomplete="off"
+                                           class="form-control text-end input-uang input-harga @error("items.$i.harga_beli") is-invalid @enderror">
                                     @error("items.$i.harga_beli") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </td>
@@ -127,7 +127,7 @@
             <select data-name="barang_id" class="pilih-barang" placeholder="Cari barang...">
                 <option value="">Cari barang...</option>
                 @foreach ($barangs as $b)
-                    <option value="{{ $b->id }}" data-satuan="{{ $b->satuan }}" data-hpp="{{ (float) $b->hpp }}">{{ $b->nama }}</option>
+                    <option value="{{ $b->id }}" data-satuan="{{ $b->satuan }}" data-hpp="{{ (float) $b->hpp }}" data-beli="{{ (float) $b->harga_beli_default }}">{{ $b->nama }}</option>
                 @endforeach
             </select>
             <small class="text-muted info-barang"></small>
@@ -141,7 +141,7 @@
         <td data-label="Harga Beli">
             <div class="input-group input-group-sm">
                 <span class="input-group-text">Rp</span>
-                <input type="number" data-name="harga_beli" min="0" step="any" class="form-control text-end input-harga">
+                <input type="text" data-name="harga_beli" inputmode="numeric" autocomplete="off" class="form-control text-end input-uang input-harga">
             </div>
         </td>
         <td class="num fw-semibold subtotal kolom-penuh" data-label="Subtotal">Rp 0</td>
@@ -165,7 +165,16 @@
             tr.querySelector('.satuan').textContent = satuan;
             tr.querySelector('.info-barang').textContent = opt && opt.value ? `HPP saat ini: ${formatRupiah(opt.dataset.hpp)}` : '';
         };
-        select.addEventListener('change', perbaruiInfo);
+        select.addEventListener('change', () => {
+            // Harga beli otomatis dari data barang bila masih kosong
+            const opt = select.selectedOptions[0];
+            const harga = tr.querySelector('.input-harga');
+            if (opt && opt.value && harga.value === '' && parseFloat(opt.dataset.beli) > 0) {
+                harga.value = Math.round(parseFloat(opt.dataset.beli)).toLocaleString('id-ID');
+                hitung();
+            }
+            perbaruiInfo();
+        });
         perbaruiInfo();
     }
 
@@ -173,7 +182,7 @@
         let total = 0;
         tbody.querySelectorAll('.baris-item').forEach((tr) => {
             const qty = parseFloat(tr.querySelector('.input-qty').value) || 0;
-            const harga = parseFloat(tr.querySelector('.input-harga').value) || 0;
+            const harga = parseUang(tr.querySelector('.input-harga').value);
             const sub = Math.round(qty * harga * 100) / 100;
             tr.querySelector('.subtotal').textContent = formatRupiah(sub);
             total += sub;

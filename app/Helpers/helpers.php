@@ -57,3 +57,46 @@ if (! function_exists('tanggal')) {
         return Carbon::parse($tanggal)->locale('id')->translatedFormat($format);
     }
 }
+
+if (! function_exists('input_uang')) {
+    /**
+     * Nilai awal <input class="input-uang">: 64000.00 -> "64.000" (kosong bila null/'').
+     */
+    function input_uang($angka): string
+    {
+        if ($angka === null || $angka === '') {
+            return '';
+        }
+
+        return number_format((float) $angka, 0, ',', '.');
+    }
+}
+
+if (! function_exists('input_qty')) {
+    /**
+     * Nilai awal input qty: 2.50 -> "2,5".
+     */
+    function input_qty($angka): string
+    {
+        if ($angka === null || $angka === '') {
+            return '';
+        }
+
+        return qty($angka);
+    }
+}
+
+if (! function_exists('ids')) {
+    /**
+     * Daftar ID dari query string: terima ?klien_id=3 maupun ?klien_id[]=3&klien_id[]=5.
+     *
+     * @return int[]
+     */
+    function ids(mixed $nilai): array
+    {
+        return collect((array) $nilai)
+            ->filter(fn ($v) => is_numeric($v) && (int) $v > 0)
+            ->map(fn ($v) => (int) $v)
+            ->unique()->values()->all();
+    }
+}

@@ -36,7 +36,11 @@
 
     @if ($barangs->isEmpty())
         <x-empty-state icon="bi-boxes" title="{{ request()->boolean('menipis') ? 'Tidak ada stok menipis 🎉' : 'Belum ada barang' }}"
-                       message="{{ request()->boolean('menipis') ? 'Semua stok barang masih di atas batas minimum.' : 'Tambahkan barang di menu Barang.' }}" />
+                       message="{{ request()->boolean('menipis') ? 'Semua stok barang masih di atas batas minimum.' : 'Barang masuk ke data stok setelah dibeli lewat Pembelian Stok.' }}">
+            @unless (request()->boolean('menipis'))
+                <a href="{{ route('pembelian-stok.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-cart-plus me-1"></i>Beli Stok</a>
+            @endunless
+        </x-empty-state>
     @else
         <div class="table-responsive">
             <table class="table table-hover align-middle">

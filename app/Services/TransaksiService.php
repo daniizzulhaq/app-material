@@ -15,8 +15,8 @@ class TransaksiService
 {
     public function __construct(
         private StokService $stok,
-        private CashflowService $cashflow,
         private NomorService $nomor,
+        private TagihanSupplierService $tagihanSupplier,
     ) {
     }
 
@@ -41,6 +41,8 @@ class TransaksiService
             );
 
             $tanggalLama = null;
+            // [supplier_id, tanggal] belanja lama: pembayaran supplier per tanggal dicek ulang setelah disimpan
+            $belanjaLama = $detailLama->where('sumber', 'supplier')->pluck('supplier_id')->unique()->values();
             if ($transaksi) {
                 $transaksi = Transaksi::whereKey($transaksi->id)->lockForUpdate()->firstOrFail();
                 $tanggalLama = $transaksi->tanggal->toDateString();
@@ -113,10 +115,10 @@ class TransaksiService
 
             $transaksi->perbaruiStatusBayar();
 
-            // Cashflow belanja supplier harian (tanggal baru & lama bila tanggal diubah)
-            $this->cashflow->syncBelanjaSupplier($data['tanggal']);
-            if ($tanggalLama && $tanggalLama !== $transaksi->tanggal->toDateString()) {
-                $this->cashflow->syncBelanjaSupplier($tanggalLama);
+            // Belanja supplier dibayar lewat menu Pembayaran (per supplier per tanggal nota).
+            // Saat edit, pastikan pembayaran yang sudah dicatat tidak melebihi belanja barunya.
+            if ($tanggalLama) {
+                $this->tagihanSupplier->pastikanTidakLebih($belanjaLama->map(fn ($id) => [(int) $id, $tanggalLama]));
             }
 
             return $transaksi;
@@ -134,12 +136,14 @@ class TransaksiService
                 $transaksi->details()->where('sumber', 'stok')->pluck('barang_id')
             );
             $tanggal = $transaksi->tanggal->toDateString();
+            $supplierIds = $transaksi->details()->where('sumber', 'supplier')->distinct()->pluck('supplier_id');
 
             $this->stok->hapusReferensi(StokMutasi::REF_TRANSAKSI, $transaksi->id);
             $transaksi->delete(); // detail ikut terhapus (cascade)
 
             $this->stok->hitungUlangBanyak($barangs); // stok kembali
-            $this->cashflow->syncBelanjaSupplier($tanggal);
+            // Belanja supplier hari itu tidak boleh lebih kecil dari pembayaran yang sudah dicatat
+            $this->tagihanSupplier->pastikanTidakLebih($supplierIds->map(fn ($id) => [(int) $id, $tanggal]));
         });
     }
 }

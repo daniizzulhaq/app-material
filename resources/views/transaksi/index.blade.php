@@ -14,21 +14,19 @@
             @endforeach
         </select>
     </div>
-    <div class="col-6 col-md-3 col-xl-2">
-        <label class="form-label small text-muted mb-1">Klien</label>
-        <select name="klien_id" class="form-select form-select-sm">
-            <option value="">Semua</option>
+    <div class="col-12 col-md-6 col-xl-3">
+        <label class="form-label small text-muted mb-1" for="f-klien">Klien <span class="fw-normal">· bisa pilih beberapa</span></label>
+        <select id="f-klien" name="klien_id[]" multiple class="tom-select" placeholder="Semua klien">
             @foreach ($kliens as $k)
-                <option value="{{ $k->id }}" @selected(request('klien_id') == $k->id)>{{ $k->nama }}</option>
+                <option value="{{ $k->id }}" @selected(in_array($k->id, $klienIds))>{{ $k->nama }}</option>
             @endforeach
         </select>
     </div>
-    <div class="col-6 col-md-3 col-xl-2">
-        <label class="form-label small text-muted mb-1">Supplier</label>
-        <select name="supplier_id" class="form-select form-select-sm">
-            <option value="">Semua</option>
+    <div class="col-12 col-md-6 col-xl-3">
+        <label class="form-label small text-muted mb-1" for="f-supplier">Supplier <span class="fw-normal">· bisa pilih beberapa</span></label>
+        <select id="f-supplier" name="supplier_id[]" multiple class="tom-select" placeholder="Semua supplier">
             @foreach ($suppliers as $s)
-                <option value="{{ $s->id }}" @selected(request('supplier_id') == $s->id)>{{ $s->nama }}</option>
+                <option value="{{ $s->id }}" @selected(in_array($s->id, $supplierIds))>{{ $s->nama }}</option>
             @endforeach
         </select>
     </div>
@@ -71,7 +69,11 @@
     <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
         <form method="GET" class="d-flex gap-2" role="search">
             @foreach (request()->except(['q', 'page']) as $k => $v)
-                <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @foreach ((array) $v as $item)
+                    @if (is_scalar($item))
+                        <input type="hidden" name="{{ is_array($v) ? $k . '[]' : $k }}" value="{{ $item }}">
+                    @endif
+                @endforeach
             @endforeach
             <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Cari no. nota...">
             <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>

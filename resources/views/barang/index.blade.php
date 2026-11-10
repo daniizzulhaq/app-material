@@ -27,7 +27,7 @@
 
     @if ($barangs->isEmpty())
         <x-empty-state icon="bi-box-seam" title="{{ request()->hasAny(['q', 'satuan', 'supplier_id']) ? 'Barang tidak ditemukan' : 'Belum ada barang' }}"
-                       message="Daftarkan barang material yang Anda jual: semen, pasir, besi, dll.">
+                       message="Daftarkan barang yang Anda jual beserta supplier, satuan, harga beli & harga jual.">
             <a href="{{ route('barang.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Tambah Barang</a>
         </x-empty-state>
     @else
@@ -38,10 +38,8 @@
                         <th>Nama</th>
                         <th>Supplier</th>
                         <th>Satuan</th>
-                        <th class="text-end">Harga Jual Default</th>
-                        <th class="text-end">Stok</th>
-                        <th class="text-end">HPP</th>
-                        <th class="text-end">Stok Min.</th>
+                        <th class="text-end">Harga Beli</th>
+                        <th class="text-end">Harga Jual</th>
                         <th class="text-end" style="width:140px">Aksi</th>
                     </tr>
                 </thead>
@@ -57,15 +55,9 @@
                                 @endif
                             </td>
                             <td>{{ $barang->satuan }}</td>
+                            <td class="num">{{ rupiah($barang->harga_beli_default) }}</td>
                             <td class="num">{{ rupiah($barang->harga_jual_default) }}</td>
-                            <td class="num">
-                                {{ qty($barang->stok) }}
-                                @if ($barang->menipis) <span class="badge badge-menipis ms-1">Menipis</span> @endif
-                            </td>
-                            <td class="num">{{ rupiah($barang->hpp) }}</td>
-                            <td class="num text-muted">{{ qty($barang->stok_minimum) }}</td>
                             <td class="text-end text-nowrap">
-                                <a href="{{ route('stok.show', $barang) }}" class="btn btn-sm btn-light" title="Kartu stok"><i class="bi bi-journal-text"></i></a>
                                 <a href="{{ route('barang.edit', $barang) }}" class="btn btn-sm btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
                                 <x-tombol-hapus :action="route('barang.destroy', $barang)" :nama="$barang->nama" />
                             </td>

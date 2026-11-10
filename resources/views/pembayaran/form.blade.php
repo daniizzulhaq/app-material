@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
 @php($edit = $pembayaran->exists)
+@php($tagihanTerpilih = old('tagihan', $pembayaran->tanggal_nota ? 'tanggal:' . $pembayaran->tanggal_nota->toDateString() : ($pembayaran->pembelian_stok_id ? 'faktur:' . $pembayaran->pembelian_stok_id : '')))
 
 @section('title', $edit ? 'Edit Pembayaran' : 'Catat Pembayaran')
 @section('page-title', $edit ? 'Edit Pembayaran' : 'Catat Pembayaran')
@@ -41,18 +42,25 @@
                         @if ($notas->isEmpty()) <div class="form-text">Tidak ada nota yang belum lunas.</div> @endif
                     </div>
 
-                    <div class="mb-3 grup-jenis" data-jenis="supplier">
-                        <label for="pembelian_stok_id" class="form-label">Faktur Pembelian (Hutang) <span class="text-danger">*</span></label>
-                        <select id="pembelian_stok_id" name="pembelian_stok_id" class="tom-select pilih-tagihan @error('pembelian_stok_id') is-invalid @enderror" placeholder="Cari no. faktur / supplier...">
-                            <option value="">Cari no. faktur / supplier...</option>
-                            @foreach ($fakturs as $f)
-                                <option value="{{ $f['id'] }}" data-total="{{ $f['total'] }}" data-sisa="{{ $f['sisa'] }}" @selected(old('pembelian_stok_id', $pembayaran->pembelian_stok_id) == $f['id'])>
-                                    {{ $f['label'] }} · sisa {{ rupiah($f['sisa']) }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('pembelian_stok_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                        @if ($fakturs->isEmpty()) <div class="form-text">Tidak ada pembelian stok dengan hutang yang belum lunas.</div> @endif
+                    <div class="grup-jenis" data-jenis="supplier">
+                        <div class="mb-3">
+                            <label for="supplier_id" class="form-label">Supplier <span class="text-danger">*</span></label>
+                            <select id="supplier_id" name="supplier_id" class="tom-select @error('supplier_id') is-invalid @enderror" placeholder="Pilih supplier...">
+                                <option value="">Pilih supplier...</option>
+                                @foreach ($suppliers as $s)
+                                    <option value="{{ $s->id }}" @selected(old('supplier_id', $pembayaran->supplier_id) == $s->id)>{{ $s->nama }}</option>
+                                @endforeach
+                            </select>
+                            @error('supplier_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="tagihan" class="form-label">Nota / Faktur yang Dibayar <span class="text-danger">*</span></label>
+                            <select id="tagihan" name="tagihan" class="@error('tagihan') is-invalid @enderror" data-selected="{{ $tagihanTerpilih }}"></select>
+                            @error('tagihan') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('pembelian_stok_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('tanggal_nota') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            <div class="form-text" id="info-tagihan-supplier">Pilih supplier untuk melihat nominal nota per hari.</div>
+                        </div>
                     </div>
 
                     <div class="alert alert-light border small d-none" id="info-tagihan">
@@ -81,8 +89,8 @@
                         <label for="jumlah" class="form-label">Jumlah <span class="text-danger">*</span></label>
                         <div class="input-group has-validation">
                             <span class="input-group-text">Rp</span>
-                            <input type="number" id="jumlah" name="jumlah" min="0" step="any" value="{{ old('jumlah', $edit ? (float) $pembayaran->jumlah : '') }}"
-                                   class="form-control text-end @error('jumlah') is-invalid @enderror" required>
+                            <input type="text" id="jumlah" name="jumlah" inputmode="numeric" autocomplete="off" value="{{ old('jumlah', $edit ? input_uang($pembayaran->jumlah) : '') }}"
+                                   class="form-control text-end input-uang @error('jumlah') is-invalid @enderror" placeholder="0" required>
                             @error('jumlah') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>
@@ -105,33 +113,106 @@
 
 @push('scripts')
 <script type="module">
-    const radios = document.querySelectorAll('input[name="jenis"]');
+    const URL_TAGIHAN = @json(route('pembayaran.tagihan-supplier'));
+    const ID_PEMBAYARAN = @json($pembayaran->id);
+    const elJumlah = document.getElementById('jumlah');
+    const elSupplier = document.getElementById('supplier_id');
+    const elTagihan = document.getElementById('tagihan');
+    const infoSupplier = document.getElementById('info-tagihan-supplier');
+    let terpilih = elTagihan.dataset.selected || '';
+    let dataTagihan = {};
+    let permintaan = 0;
     let sisaAktif = 0;
 
-    function selectAktif() {
-        const jenis = document.querySelector('input[name="jenis"]:checked')?.value;
-        return document.getElementById(jenis === 'supplier' ? 'pembelian_stok_id' : 'transaksi_id');
+    const tsTagihan = new TomSelect(elTagihan, {
+        dropdownParent: 'body',
+        allowEmptyOption: true,
+        placeholder: 'Pilih nota / faktur...',
+        maxOptions: 1000,
+        optgroups: [
+            { value: 'nota', label: 'Nota per tanggal (semua klien digabung)' },
+            { value: 'faktur', label: 'Faktur pembelian stok (hutang)' },
+        ],
+        lockOptgroupOrder: true,
+        render: { no_results: () => '<div class="no-results">Tidak ada tagihan</div>' },
+    });
+
+    const jenis = () => document.querySelector('input[name="jenis"]:checked')?.value;
+
+    /** Info total & sisa tagihan terpilih (nota klien / tagihan supplier) */
+    function tampilInfo(total, sisa) {
+        const info = document.getElementById('info-tagihan');
+        if (total === null) { info.classList.add('d-none'); return; }
+        sisaAktif = sisa;
+        document.getElementById('info-total').textContent = formatRupiah(total);
+        document.getElementById('info-sisa').textContent = formatRupiah(sisa);
+        info.classList.remove('d-none');
     }
 
     function perbarui() {
-        const jenis = document.querySelector('input[name="jenis"]:checked')?.value;
-        document.querySelectorAll('.grup-jenis').forEach((g) => g.classList.toggle('d-none', g.dataset.jenis !== jenis));
-
-        const opt = selectAktif().selectedOptions[0];
-        const info = document.getElementById('info-tagihan');
-        if (opt && opt.value) {
-            sisaAktif = parseFloat(opt.dataset.sisa) || 0;
-            document.getElementById('info-total').textContent = formatRupiah(opt.dataset.total);
-            document.getElementById('info-sisa').textContent = formatRupiah(sisaAktif);
-            info.classList.remove('d-none');
+        document.querySelectorAll('.grup-jenis').forEach((g) => g.classList.toggle('d-none', g.dataset.jenis !== jenis()));
+        if (jenis() === 'klien') {
+            const opt = document.getElementById('transaksi_id').selectedOptions[0];
+            const ada = opt && opt.value;
+            tampilInfo(ada ? parseFloat(opt.dataset.total) : null, ada ? parseFloat(opt.dataset.sisa) || 0 : 0);
         } else {
-            info.classList.add('d-none');
+            const t = dataTagihan[tsTagihan.getValue()];
+            tampilInfo(t ? t.total : null, t ? t.sisa : 0);
         }
     }
 
-    radios.forEach((r) => r.addEventListener('change', perbarui));
-    document.querySelectorAll('.pilih-tagihan').forEach((s) => s.addEventListener('change', perbarui));
-    document.getElementById('isi-lunas').addEventListener('click', () => document.getElementById('jumlah').value = sisaAktif);
+    /** Muat nominal nota per hari + faktur hutang milik supplier terpilih */
+    async function muatTagihan() {
+        const nomor = ++permintaan;
+        tsTagihan.clear(true);
+        tsTagihan.clearOptions();
+        dataTagihan = {};
+        perbarui();
+
+        if (!elSupplier.value) {
+            infoSupplier.textContent = 'Pilih supplier untuk melihat nominal nota per hari.';
+            return;
+        }
+
+        infoSupplier.textContent = 'Memuat tagihan...';
+        const params = new URLSearchParams({ supplier_id: elSupplier.value, pembayaran: ID_PEMBAYARAN ?? '', selected: terpilih });
+        let data;
+        try {
+            const res = await fetch(`${URL_TAGIHAN}?${params}`, { headers: { Accept: 'application/json' } });
+            if (!res.ok) throw new Error('gagal');
+            data = await res.json();
+        } catch (e) {
+            if (nomor === permintaan) infoSupplier.textContent = 'Tagihan gagal dimuat. Pilih ulang supplier untuk mencoba lagi.';
+            return;
+        }
+        if (nomor !== permintaan) return;
+
+        data.forEach((t) => { tsTagihan.addOption(t); dataTagihan[t.value] = t; });
+        tsTagihan.refreshOptions(false);
+        infoSupplier.textContent = data.length
+            ? 'Nominal nota = total belanja ke supplier ini dari semua nota pada tanggal tsb. Jumlah terisi otomatis sesuai sisa.'
+            : 'Supplier ini tidak punya tagihan yang belum lunas.';
+
+        if (terpilih && dataTagihan[terpilih]) tsTagihan.setValue(terpilih, true);
+        terpilih = '';
+        perbarui();
+    }
+
+    // Pilih tagihan supplier -> jumlah otomatis = sisa (bila masih kosong)
+    tsTagihan.on('change', (val) => {
+        const t = dataTagihan[val];
+        if (t && !elJumlah.value) elJumlah.value = Math.round(t.sisa).toLocaleString('id-ID');
+        perbarui();
+    });
+
+    document.querySelectorAll('input[name="jenis"]').forEach((r) => r.addEventListener('change', perbarui));
+    document.getElementById('transaksi_id').addEventListener('change', perbarui);
+    elSupplier.addEventListener('change', muatTagihan);
+    document.getElementById('isi-lunas').addEventListener('click', () => {
+        elJumlah.value = Math.round(sisaAktif).toLocaleString('id-ID');
+    });
+
     perbarui();
+    muatTagihan();
 </script>
 @endpush

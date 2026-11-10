@@ -23,6 +23,22 @@ window.formatRupiah = (angka, prefix = true) => {
 window.formatQty = (angka) =>
     (Number(angka) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 
+/** Teks uang "9.965.000" / "12.345,67" -> angka 9965000 / 12345.67 */
+window.parseUang = (s) => Number(String(s ?? '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+
+/** Teks qty "12,5" / "12.5" -> angka 12.5 */
+window.parseQty = (s) => Number(String(s ?? '').trim().replace(',', '.')) || 0;
+
+/** <input class="input-uang">: tampil dengan titik ribuan saat diketik (64000 -> 64.000) */
+window.formatInputUang = (el) => {
+    if (el.readOnly) return;
+    const digit = el.value.replace(/\D/g, '');
+    el.value = digit ? Number(digit).toLocaleString('id-ID') : '';
+};
+document.addEventListener('input', (e) => {
+    if (e.target.classList?.contains('input-uang')) window.formatInputUang(e.target);
+});
+
 /* ---------------------------------------------------------
    Toast notifikasi
    --------------------------------------------------------- */
@@ -51,10 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tom Select otomatis untuk <select class="tom-select">
     document.querySelectorAll('select.tom-select').forEach((el) => {
         if (el.tomselect) return;
+        const multi = el.multiple;
         new TomSelect(el, {
-            allowEmptyOption: true,
+            allowEmptyOption: !multi,
             create: false,
             placeholder: el.getAttribute('placeholder') || 'Cari...',
+            maxOptions: 1000,
+            // Multi pilih (filter klien/supplier): tombol x di tiap pilihan, dropdown tetap terbuka
+            plugins: multi ? ['remove_button'] : [],
+            closeAfterSelect: !multi,
+            ...(multi ? { hidePlaceholder: true } : {}),
         });
     });
 
