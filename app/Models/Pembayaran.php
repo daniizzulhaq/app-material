@@ -14,7 +14,7 @@ class Pembayaran extends Model
     protected $table = 'pembayarans';
 
     protected $fillable = [
-        'tanggal', 'jenis', 'klien_id', 'supplier_id', 'transaksi_id', 'pembelian_stok_id', 'tanggal_nota',
+        'tanggal', 'jenis', 'klien_id', 'supplier_id', 'transaksi_id', 'pembelian_stok_id',
         'jumlah', 'metode', 'keterangan',
     ];
 
@@ -22,7 +22,6 @@ class Pembayaran extends Model
     {
         return [
             'tanggal' => 'date',
-            'tanggal_nota' => 'date', // pembayaran supplier atas belanja nota tanggal ini
             'jumlah' => 'decimal:2',
         ];
     }
@@ -42,12 +41,15 @@ class Pembayaran extends Model
         return $this->belongsTo(Transaksi::class);
     }
 
-    /** Label dokumen yang dibayar: no. nota / no. faktur / "Nota 06 Nov 2026" */
+    /**
+     * Pembayaran klien (uang masuk), boleh dikaitkan ke satu nota.
+     * Jenis "supplier" hanya untuk pelunasan hutang pembelian stok (dari halaman Pembelian Stok);
+     * belanja supplier dari nota sudah lunas otomatis per hari.
+     */
     public function getDokumenAttribute(): string
     {
         return match (true) {
-            $this->jenis === 'klien' => $this->transaksi?->no_nota ?? '-',
-            (bool) $this->tanggal_nota => 'Nota ' . tanggal($this->tanggal_nota),
+            $this->jenis === 'klien' => $this->transaksi ? 'Nota ' . tanggal($this->transaksi->tanggal) : 'Tanpa nota',
             default => $this->pembelianStok?->no_faktur ?? '-',
         };
     }

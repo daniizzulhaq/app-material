@@ -45,7 +45,7 @@ class HalamanTest extends TestCase
             ],
         ])->assertSessionHasNoErrors();
         $this->post(route('pembayaran.store'), [
-            'tanggal' => '2026-11-03', 'jenis' => 'klien', 'transaksi_id' => Transaksi::first()->id, 'jumlah' => 100000, 'metode' => 'tunai',
+            'tanggal' => '2026-11-03', 'jenis' => 'klien', 'klien_id' => $klien->id, 'transaksi_id' => Transaksi::first()->id, 'jumlah' => 100000, 'metode' => 'tunai',
         ])->assertSessionHasNoErrors();
         $this->post(route('cashflow.store'), [
             'tanggal' => '2026-11-03', 'tipe' => 'keluar', 'kategori' => 'operasional', 'nominal' => 50000, 'keterangan' => 'Listrik',
@@ -93,11 +93,16 @@ class HalamanTest extends TestCase
             route('transaksi.index'), route('transaksi.index', ['sumber' => 'stok', 'supplier_id' => 1]),
             route('transaksi.create'), route('transaksi.show', $transaksi), route('transaksi.edit', $transaksi),
             route('transaksi.cetak', $transaksi),
-            route('pembayaran.index'), route('pembayaran.create'), route('pembayaran.create', ['jenis' => 'supplier']),
+            route('pembayaran.index'), route('pembayaran.create'), route('pembayaran.create', ['transaksi_id' => $transaksi->id]),
+            route('pembayaran.create', ['pembelian_stok_id' => $pembelian->id]),
+            route('pembayaran.nota', ['klien_id' => $transaksi->klien_id]),
             route('pembayaran.edit', Pembayaran::first()),
             route('cashflow.index'), route('cashflow.create'), route('cashflow.edit', $manual),
             route('laporan.klien'), route('laporan.klien', ['klien_id' => $transaksi->klien_id]),
-            route('laporan.supplier'), route('laporan.barang'), route('laporan.stok'),
+            route('laporan.klien', ['klien_id' => [$transaksi->klien_id], 'qty' => 'rincian', 'harga' => 'jual', 'klien' => 'sembunyi']),
+            route('laporan.supplier'), route('laporan.supplier', ['harga' => 'lengkap', 'klien' => 'tampil', 'qty' => 'rincian']),
+            route('laporan.barang'), route('laporan.barang', ['klien' => 'tampil', 'harga' => 'tanpa']),
+            route('laporan.stok'), route('laporan.stok', ['harga' => 'tanpa']),
             route('riwayat.index'), route('riwayat.index', ['status' => 'semua']),
             route('user.edit'),
         ];

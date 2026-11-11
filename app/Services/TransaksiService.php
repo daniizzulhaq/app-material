@@ -8,15 +8,15 @@ use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Nota penjualan. Semua angka dihitung ulang di server (input client hanya qty, harga jual,
- * dan harga beli untuk item supplier).
+ * Nota penjualan (tanpa nomor; dikenali dari klien + tanggal).
+ * Semua angka dihitung ulang di server (input client hanya qty, harga jual, dan harga beli untuk item supplier).
+ * Belanja supplier (item sumber supplier) otomatis lunas: cashflow keluar harian per tanggal nota.
  */
 class TransaksiService
 {
     public function __construct(
         private StokService $stok,
-        private NomorService $nomor,
-        private TagihanSupplierService $tagihanSupplier,
+        private CashflowService $cashflow,
     ) {
     }
 
@@ -41,8 +41,6 @@ class TransaksiService
             );
 
             $tanggalLama = null;
-            // [supplier_id, tanggal] belanja lama: pembayaran supplier per tanggal dicek ulang setelah disimpan
-            $belanjaLama = $detailLama->where('sumber', 'supplier')->pluck('supplier_id')->unique()->values();
             if ($transaksi) {
                 $transaksi = Transaksi::whereKey($transaksi->id)->lockForUpdate()->firstOrFail();
                 $tanggalLama = $transaksi->tanggal->toDateString();
@@ -88,9 +86,7 @@ class TransaksiService
                 $transaksi->details()->delete();
                 $this->stok->hapusReferensi(StokMutasi::REF_TRANSAKSI, $transaksi->id);
             } else {
-                $transaksi = new Transaksi([
-                    'no_nota' => $data['no_nota'] ?? $this->nomor->buat(Transaksi::class, 'no_nota', 'NJ', $data['tanggal']),
-                ]);
+                $transaksi = new Transaksi;
             }
 
             $transaksi->fill([
@@ -109,16 +105,16 @@ class TransaksiService
             // Item dari stok: stok berkurang (tidak membuat cashflow)
             foreach ($items->where('sumber', 'stok') as $i) {
                 $this->stok->catat($i['barang_id'], 'keluar', $data['tanggal'], $i['qty'], $i['harga_beli'],
-                    StokMutasi::REF_TRANSAKSI, $transaksi->id, "Nota {$transaksi->no_nota}");
+                    StokMutasi::REF_TRANSAKSI, $transaksi->id, $transaksi->label());
             }
             $this->stok->hitungUlangBanyak($barangs);
 
             $transaksi->perbaruiStatusBayar();
 
-            // Belanja supplier dibayar lewat menu Pembayaran (per supplier per tanggal nota).
-            // Saat edit, pastikan pembayaran yang sudah dicatat tidak melebihi belanja barunya.
-            if ($tanggalLama) {
-                $this->tagihanSupplier->pastikanTidakLebih($belanjaLama->map(fn ($id) => [(int) $id, $tanggalLama]));
+            // Belanja supplier lunas otomatis: cashflow harian tanggal baru (& tanggal lama bila dipindah)
+            $this->cashflow->syncBelanjaSupplier($transaksi->tanggal);
+            if ($tanggalLama && $tanggalLama !== $transaksi->tanggal->toDateString()) {
+                $this->cashflow->syncBelanjaSupplier($tanggalLama);
             }
 
             return $transaksi;
@@ -129,21 +125,19 @@ class TransaksiService
     {
         DB::transaction(function () use ($transaksi) {
             if ($transaksi->pembayarans()->exists()) {
-                throw new BisnisException("Nota {$transaksi->no_nota} sudah memiliki pembayaran. Hapus pembayarannya dulu.");
+                throw new BisnisException($transaksi->label() . ' sudah memiliki pembayaran. Hapus pembayarannya dulu.');
             }
 
             $barangs = $this->stok->kunciBarang(
                 $transaksi->details()->where('sumber', 'stok')->pluck('barang_id')
             );
             $tanggal = $transaksi->tanggal->toDateString();
-            $supplierIds = $transaksi->details()->where('sumber', 'supplier')->distinct()->pluck('supplier_id');
 
             $this->stok->hapusReferensi(StokMutasi::REF_TRANSAKSI, $transaksi->id);
             $transaksi->delete(); // detail ikut terhapus (cascade)
 
             $this->stok->hitungUlangBanyak($barangs); // stok kembali
-            // Belanja supplier hari itu tidak boleh lebih kecil dari pembayaran yang sudah dicatat
-            $this->tagihanSupplier->pastikanTidakLebih($supplierIds->map(fn ($id) => [(int) $id, $tanggal]));
+            $this->cashflow->syncBelanjaSupplier($tanggal); // belanja supplier harian berkurang
         });
     }
 }

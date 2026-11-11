@@ -85,6 +85,14 @@ class PembelianStokController extends Controller
             ? $pembelian->details->map(fn ($d) => $d->only(['barang_id', 'qty', 'harga_beli']))->all()
             : [['barang_id' => '', 'qty' => '', 'harga_beli' => '']]);
 
+        // Input lama setelah validasi gagal masih berformat form ("64.000") → angka murni agar nol tidak hilang
+        if (is_array(old('items'))) {
+            $items = collect($items)->map(fn ($i) => is_array($i) ? array_merge($i, [
+                'qty' => baca_qty($i['qty'] ?? null),
+                'harga_beli' => baca_uang($i['harga_beli'] ?? null),
+            ]) : $i)->all();
+        }
+
         return [
             'pembelian' => $pembelian,
             'items' => $items, // indeks asli dipertahankan agar error validasi cocok per baris

@@ -74,7 +74,7 @@ if (! function_exists('input_uang')) {
 
 if (! function_exists('input_qty')) {
     /**
-     * Nilai awal input qty: 2.50 -> "2,5".
+     * Nilai awal input qty: 2.50 -> "2,5", 1000 -> "1000" (tanpa titik ribuan agar tidak terbaca 1).
      */
     function input_qty($angka): string
     {
@@ -82,7 +82,7 @@ if (! function_exists('input_qty')) {
             return '';
         }
 
-        return qty($angka);
+        return rtrim(rtrim(number_format((float) $angka, 2, ',', ''), '0'), ',');
     }
 }
 
@@ -98,5 +98,40 @@ if (! function_exists('ids')) {
             ->filter(fn ($v) => is_numeric($v) && (int) $v > 0)
             ->map(fn ($v) => (int) $v)
             ->unique()->values()->all();
+    }
+}
+
+if (! function_exists('baca_uang')) {
+    /**
+     * Teks uang dari form -> angka murni: "Rp 9.965.000" -> "9965000", "1.500,5" -> "1500.5".
+     * Nilai non-teks / kosong dikembalikan apa adanya.
+     */
+    function baca_uang(mixed $nilai): mixed
+    {
+        if (! is_string($nilai) || trim($nilai) === '') {
+            return $nilai;
+        }
+
+        return str_replace(',', '.', str_replace(['Rp', ' ', '.'], '', $nilai));
+    }
+}
+
+if (! function_exists('baca_qty')) {
+    /**
+     * Teks qty dari form -> angka murni (sama dengan parseQty() di app.js):
+     *  "2,5" -> "2.5", "1.000,5" -> "1000.5", "1.000.000" -> "1000000", "2.5" -> "2.5".
+     */
+    function baca_qty(mixed $nilai): mixed
+    {
+        if (! is_string($nilai)) {
+            return $nilai;
+        }
+        $nilai = str_replace(' ', '', trim($nilai));
+
+        if (str_contains($nilai, ',')) {
+            return str_replace(',', '.', str_replace('.', '', $nilai));
+        }
+
+        return substr_count($nilai, '.') > 1 ? str_replace('.', '', $nilai) : $nilai;
     }
 }

@@ -102,10 +102,9 @@ class RiwayatService
         $t->loadMissing(['klien', 'details']);
 
         return [
-            'jenis' => 'transaksi', 'label' => $t->no_nota,
+            'jenis' => 'transaksi', 'label' => $t->label(),
             'ringkasan' => tanggal($t->tanggal) . ' · ' . ($t->klien->nama ?? '-') . ' · ' . rupiah($t->total_jual),
             'data' => [
-                'no_nota' => $t->no_nota,
                 'tanggal' => $t->tanggal->toDateString(),
                 'klien_id' => $t->klien_id,
                 'keterangan' => $t->keterangan,
@@ -137,7 +136,6 @@ class RiwayatService
             'ringkasan' => tanggal($p->tanggal) . ' · ' . $pihak,
             'data' => array_merge($p->only($p->getFillable()), [
                 'tanggal' => $p->tanggal->toDateString(),
-                'tanggal_nota' => $p->tanggal_nota?->toDateString(),
             ]),
         ];
     }
@@ -225,12 +223,10 @@ class RiwayatService
             $this->wajibAda(Supplier::class, $sid, 'Supplier di salah satu item sudah dihapus. Pulihkan supplier-nya dulu.');
         }
 
-        if (Transaksi::where('no_nota', $d['no_nota'])->exists()) {
-            unset($d['no_nota']);
-        }
+        unset($d['no_nota']); // data lama (sebelum nota tanpa nomor)
         $t = $this->transaksi->simpan($d);
 
-        return "Nota {$t->no_nota} berhasil dipulihkan. Stok & cashflow dihitung ulang.";
+        return $t->label() . ' berhasil dipulihkan. Stok & cashflow dihitung ulang.';
     }
 
     private function pulihkanOpname(array $d): string
@@ -251,17 +247,16 @@ class RiwayatService
 
     private function pulihkanPembayaran(array $d): string
     {
-        if ($d['jenis'] === 'supplier' && ! empty($d['tanggal_nota'])) {
-            // Pembayaran belanja nota supplier per tanggal
-            $this->wajibAda(Supplier::class, $d['supplier_id'], 'Supplier pembayaran ini sudah dihapus. Pulihkan supplier-nya dulu.');
-            $tagihan = app(TagihanSupplierService::class)->tanggal((int) $d['supplier_id'], $d['tanggal_nota']);
-            if (! $tagihan) {
-                throw new BisnisException('Nota supplier pada tanggal pembayaran ini sudah dihapus. Pulihkan notanya dulu.');
-            }
-            if ((float) $d['jumlah'] > $tagihan->sisa + 0.001) {
-                throw new BisnisException('Tidak bisa dipulihkan: jumlah ' . rupiah($d['jumlah']) . ' melebihi sisa tagihan (' . rupiah($tagihan->sisa) . ').');
-            }
+        // Pembayaran supplier per tanggal nota (sebelum revisi 3) sudah tidak dipakai:
+        // belanja supplier dari nota kini lunas otomatis per hari.
+        if ($d['jenis'] === 'supplier' && empty($d['pembelian_stok_id'])) {
+            throw new BisnisException('Pembayaran supplier per tanggal nota sudah tidak dipakai (belanja supplier lunas otomatis per hari), jadi tidak bisa dipulihkan.');
+        }
+        unset($d['tanggal_nota']);
 
+        if ($d['jenis'] === 'klien' && empty($d['transaksi_id'])) {
+            // Pembayaran klien tanpa nota
+            $this->wajibAda(Klien::class, $d['klien_id'], 'Klien pembayaran ini sudah dihapus. Pulihkan klien-nya dulu.');
             Pembayaran::create($d);
 
             return 'Pembayaran ' . rupiah($d['jumlah']) . ' berhasil dipulihkan.';

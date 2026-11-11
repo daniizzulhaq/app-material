@@ -26,8 +26,13 @@ window.formatQty = (angka) =>
 /** Teks uang "9.965.000" / "12.345,67" -> angka 9965000 / 12345.67 */
 window.parseUang = (s) => Number(String(s ?? '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 
-/** Teks qty "12,5" / "12.5" -> angka 12.5 */
-window.parseQty = (s) => Number(String(s ?? '').trim().replace(',', '.')) || 0;
+/** Teks qty "12,5" / "12.5" / "1.000,5" -> angka (sama dengan baca_qty() di PHP) */
+window.parseQty = (s) => {
+    let t = String(s ?? '').replace(/\s/g, '');
+    if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+    else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+    return Number(t) || 0;
+};
 
 /** <input class="input-uang">: tampil dengan titik ribuan saat diketik (64000 -> 64.000) */
 window.formatInputUang = (el) => {

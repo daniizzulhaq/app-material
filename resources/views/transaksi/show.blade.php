@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', $transaksi->no_nota)
-@section('page-title', "Nota {$transaksi->no_nota}")
+@section('title', $transaksi->label())
+@section('page-title', $transaksi->label())
 @section('breadcrumb')
     <a href="{{ route('transaksi.index') }}">Rekapan</a> / Detail
 @endsection
@@ -9,14 +9,14 @@
 @section('content')
 <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
     @if ($transaksi->status_bayar !== 'lunas')
-        <a href="{{ route('pembayaran.create', ['jenis' => 'klien', 'transaksi_id' => $transaksi->id]) }}" class="btn btn-sm btn-success">
+        <a href="{{ route('pembayaran.create', ['transaksi_id' => $transaksi->id]) }}" class="btn btn-sm btn-success">
             <i class="bi bi-cash-coin me-1"></i>Terima Pembayaran
         </a>
     @endif
     <a href="{{ route('transaksi.cetak', $transaksi) }}" target="_blank" class="btn btn-sm btn-light"><i class="bi bi-printer me-1"></i>Cetak</a>
     <a href="{{ route('transaksi.cetak', [$transaksi, 'pdf' => 1]) }}" class="btn btn-sm btn-light"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
     <a href="{{ route('transaksi.edit', $transaksi) }}" class="btn btn-sm btn-light"><i class="bi bi-pencil me-1"></i>Edit</a>
-    <x-tombol-hapus :action="route('transaksi.destroy', $transaksi)" :nama="$transaksi->no_nota" label="Hapus" />
+    <x-tombol-hapus :action="route('transaksi.destroy', $transaksi)" :nama="$transaksi->label()" label="Hapus" />
 </div>
 
 <div class="row g-3 mb-3">
@@ -80,7 +80,6 @@
         <div class="card mb-3">
             <div class="card-body">
                 <dl class="row mb-0 small">
-                    <dt class="col-5 text-muted fw-normal">No. Nota</dt><dd class="col-7 fw-semibold">{{ $transaksi->no_nota }}</dd>
                     <dt class="col-5 text-muted fw-normal">Tanggal</dt><dd class="col-7">{{ tanggal($transaksi->tanggal) }}</dd>
                     <dt class="col-5 text-muted fw-normal">Klien</dt><dd class="col-7">{{ $transaksi->klien->nama }}</dd>
                     <dt class="col-5 text-muted fw-normal">Status</dt><dd class="col-7"><x-status-badge :status="$transaksi->status_bayar" /></dd>

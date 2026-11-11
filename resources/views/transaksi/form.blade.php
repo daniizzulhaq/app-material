@@ -3,7 +3,7 @@
 @php($edit = $transaksi->exists)
 
 @section('title', $edit ? 'Edit Nota' : 'Nota Baru')
-@section('page-title', $edit ? "Edit Nota {$transaksi->no_nota}" : 'Nota Penjualan Baru')
+@section('page-title', $edit ? 'Edit ' . $transaksi->label() : 'Nota Penjualan Baru')
 @section('breadcrumb')
     <a href="{{ route('transaksi.index') }}">Rekapan</a> / {{ $edit ? 'Edit' : 'Baru' }}
 @endsection
@@ -77,9 +77,9 @@
         </div>
     </div>
 
-    {{-- Ringkasan sticky di bawah form --}}
-    <div class="card ringkasan-sticky">
-        <div class="card-body py-3">
+    {{-- Ringkasan total: menempel tetap di bawah layar (tidak ikut naik-turun saat digulir) --}}
+    <div class="card ringkasan-bawah" id="ringkasan-bawah">
+        <div class="card-body py-2 py-md-3">
             <div class="row g-3 align-items-center">
                 <div class="col-6 col-md">
                     <div class="stat-label mb-0">Total Jual</div>
@@ -157,7 +157,15 @@
 
 @push('styles')
 <style>
-    .ringkasan-sticky { position: sticky; bottom: 1rem; z-index: 20; box-shadow: 0 -2px 18px rgba(16, 24, 40, .10); }
+    /* Total nota selalu di bawah layar; tinggi kartu disalin ke padding form (lihat script) agar isi tidak tertutup */
+    .ringkasan-bawah { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1020; margin: 0; border-radius: 14px 14px 0 0;
+        box-shadow: 0 -4px 18px rgba(16, 24, 40, .12); }
+    @media (min-width: 992px) { .ringkasan-bawah { left: var(--sidebar-width); } }
+    .ts-dropdown { z-index: 1040; } /* dropdown barang tetap di atas kartu total */
+    @media (max-width: 767.98px) {
+        .ringkasan-bawah .stat-label { font-size: .7rem; }
+        .ringkasan-bawah .fs-5 { font-size: 1rem !important; }
+    }
     /* Tabel selebar kartu (table-layout fixed) agar tidak perlu digeser ke samping */
     .tabel-nota { width: 100%; table-layout: fixed; }
     .tabel-nota > :is(thead, tbody) > tr > :is(th, td) { padding: .45rem .3rem; vertical-align: top; }
@@ -206,6 +214,8 @@
 
     const angka = (n) => (n ? Math.round(n).toLocaleString('id-ID') : '');
     const angkaDesimal = (n) => (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    // Qty di input: tanpa titik ribuan (1000 bukan 1.000) agar tidak terbaca sebagai desimal
+    const angkaQty = (n) => (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2, useGrouping: false });
     const hppUntuk = (barangId) => {
         if (HPP_TERKUNCI[barangId] !== undefined) return parseFloat(HPP_TERKUNCI[barangId]);
         return BARANG[barangId] ? BARANG[barangId].hpp : 0;
@@ -263,7 +273,7 @@
 
         // Nilai awal dari database / old input sudah berupa angka murni (70000.00)
         const ada = (v) => v !== undefined && v !== null && v !== '';
-        if (ada(item.qty)) tr.querySelector('.input-qty').value = angkaDesimal(Number(item.qty));
+        if (ada(item.qty)) tr.querySelector('.input-qty').value = angkaQty(Number(item.qty));
         if (ada(item.harga_jual)) {
             tr.querySelector('.input-jual').value = angka(Number(item.harga_jual)) || '0';
             tr.querySelector('.input-jual').dataset.auto = '0';
@@ -469,6 +479,13 @@
             Toast.fire({ icon: 'error', title: 'Ada qty yang melebihi sisa stok.' });
         }
     });
+
+    // Jaga isi form tidak tertutup kartu total yang menempel di bawah layar
+    const formNota = document.getElementById('form-nota');
+    const kartuTotal = document.getElementById('ringkasan-bawah');
+    const aturJarakBawah = () => { formNota.style.paddingBottom = `${kartuTotal.offsetHeight + 16}px`; };
+    new ResizeObserver(aturJarakBawah).observe(kartuTotal);
+    aturJarakBawah();
 
     // Muat baris awal (edit / old input), atau 1 baris kosong
     const keys = Object.keys(ITEMS);

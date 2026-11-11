@@ -31,6 +31,61 @@
     <div class="col-6 col-xl-3"><x-stat-card label="Saldo Akhir" :value="rupiah($saldoAkhir)" icon="bi-safe2" color="purple" :hint="'per ' . tanggal($sampai)" /></div>
 </div>
 
+{{-- Perputaran modal --}}
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <h6 class="card-title mb-0">Perputaran Modal</h6>
+        <a href="{{ route('cashflow.create', ['kategori' => 'modal']) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Input Modal Awal</a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            @foreach ([
+                ['Modal Awal Periode', $modal['saldo_awal'], ''],
+                ['Setoran / Penarikan Modal', $modal['tambahan'], ''],
+                ['Total Nota Beli', -$modal['belanja'], 'text-danger'],
+                ['Modal Kembali (dibayar klien)', $modal['kembali'], 'text-success'],
+                ['Modal Tersedia', $modal['saldo_akhir'], 'fs-5'],
+            ] as [$label, $nilai, $kelas])
+                <div class="col-6 col-xl">
+                    <div class="small text-muted mb-1">{{ $label }}</div>
+                    <div class="fw-bold {{ $kelas }} {{ $nilai < 0 && $kelas === 'fs-5' ? 'text-danger' : '' }}">{{ rupiah($nilai) }}</div>
+                </div>
+            @endforeach
+        </div>
+        <p class="small text-muted mt-3 mb-0">
+            <i class="bi bi-info-circle me-1"></i>Modal otomatis <b>berkurang</b> sebesar total nota beli (belanja supplier + HPP barang stok) per tanggal nota,
+            dan otomatis <b>bertambah</b> sebesar bagian harga beli dari setiap pembayaran klien yang dikaitkan ke nota (proporsional; laba tidak ikut).
+            Modal awal = cashflow manual kategori <b>Modal</b>. Pengeluaran operasional dll tetap dicatat lewat Input Manual.
+        </p>
+    </div>
+    @if ($modal['harian']->isNotEmpty())
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th class="text-end">Setoran / Penarikan</th>
+                        <th class="text-end">Total Nota Beli</th>
+                        <th class="text-end">Modal Kembali</th>
+                        <th class="text-end">Modal Tersedia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($modal['harian'] as $row)
+                        <tr>
+                            <td class="text-nowrap">{{ tanggal($row->tanggal) }}</td>
+                            <td class="num">{{ $row->tambahan ? rupiah($row->tambahan) : '' }}</td>
+                            <td class="num text-danger">{{ $row->belanja ? '−' . rupiah($row->belanja) : '' }}</td>
+                            <td class="num text-success">{{ $row->kembali ? '+' . rupiah($row->kembali) : '' }}</td>
+                            <td class="num fw-semibold {{ $row->saldo < 0 ? 'text-danger' : '' }}">{{ rupiah($row->saldo) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+</div>
+
 <div class="card">
     <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
         <div class="small">
@@ -39,7 +94,7 @@
                 <span class="text-success ms-1">+{{ rupiah($totalFilter->masuk) }}</span>
                 <span class="text-danger ms-1">−{{ rupiah($totalFilter->keluar) }}</span>
             @else
-                <span class="text-muted"><i class="bi bi-info-circle me-1"></i>Baris berlabel <span class="badge badge-otomatis">Otomatis</span> dibuat sistem dari pembelian, nota, dan pembayaran.</span>
+                <span class="text-muted"><i class="bi bi-info-circle me-1"></i>Baris berlabel <span class="badge badge-otomatis">Otomatis</span> dibuat sistem: pembelian stok tunai, belanja supplier harian dari nota (lunas otomatis), dan pembayaran klien.</span>
             @endif
         </div>
         <a href="{{ route('cashflow.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Input Manual</a>

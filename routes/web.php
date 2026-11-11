@@ -45,7 +45,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Keuangan
-    Route::get('pembayaran/tagihan-supplier', [PembayaranController::class, 'tagihanSupplier'])->name('pembayaran.tagihan-supplier');
+    Route::get('pembayaran/nota', [PembayaranController::class, 'notaKlien'])->name('pembayaran.nota');
     Route::resource('pembayaran', PembayaranController::class)->except('show');
     Route::resource('cashflow', CashflowController::class)->except('show');
 

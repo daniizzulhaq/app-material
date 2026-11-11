@@ -11,17 +11,13 @@ trait NormalisasiAngka
     /** "Rp 9.965.000" -> "9965000", "1.500,5" -> "1500.5" */
     protected function uang(mixed $nilai): mixed
     {
-        if (! is_string($nilai) || trim($nilai) === '') {
-            return $nilai;
-        }
-
-        return str_replace(',', '.', str_replace(['Rp', ' ', '.'], '', $nilai));
+        return baca_uang($nilai);
     }
 
-    /** Qty: koma sebagai pemisah desimal ("2,5" -> "2.5"). */
+    /** Qty: koma sebagai pemisah desimal ("2,5" -> "2.5", "1.000,5" -> "1000.5"). */
     protected function desimal(mixed $nilai): mixed
     {
-        return is_string($nilai) ? str_replace(',', '.', trim($nilai)) : $nilai;
+        return baca_qty($nilai);
     }
 
     /** Normalisasi beberapa field uang sekaligus (hanya yang dikirim). */

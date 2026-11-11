@@ -49,11 +49,11 @@ class RiwayatHapusTest extends TestCase
             'items' => [['barang_id' => $this->semen->id, 'sumber' => 'stok', 'qty' => 4, 'harga_jual' => 70000]],
         ])->assertSessionHasNoErrors();
         $nota = Transaksi::first();
-        $noNota = $nota->no_nota;
+        $label = $nota->label();
 
         $this->delete(route('transaksi.destroy', $nota))->assertSessionHas('success');
         $this->assertEquals(10, (float) $this->semen->fresh()->stok);
-        $this->assertDatabaseHas('riwayat_hapus', ['jenis' => 'transaksi', 'label' => $noNota, 'dipulihkan_at' => null]);
+        $this->assertDatabaseHas('riwayat_hapus', ['jenis' => 'transaksi', 'label' => $label, 'dipulihkan_at' => null]);
 
         // Harga beli naik setelah nota dihapus, tapi nota yang dipulihkan tetap memakai HPP lamanya
         $this->post(route('pembelian-stok.store'), [
@@ -64,7 +64,7 @@ class RiwayatHapusTest extends TestCase
         $this->pulihkanTerakhir()->assertSessionHas('success');
 
         $pulih = Transaksi::with('details')->first();
-        $this->assertEquals($noNota, $pulih->no_nota);
+        $this->assertEquals('2026-11-02', $pulih->tanggal->toDateString());
         $this->assertEquals(50000, (float) $pulih->details->first()->harga_beli);
         $this->assertEquals(16, (float) $this->semen->fresh()->stok);
         $this->assertNotNull(RiwayatHapus::where('jenis', 'transaksi')->first()->dipulihkan_at);

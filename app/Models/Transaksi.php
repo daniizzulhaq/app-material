@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** Nota penjualan */
+/** Nota penjualan (tanpa nomor: dikenali dari klien + tanggal) */
 class Transaksi extends Model
 {
     protected $table = 'transaksis';
 
     protected $fillable = [
-        'no_nota', 'tanggal', 'klien_id', 'total_qty', 'total_jual', 'total_modal',
+        'tanggal', 'klien_id', 'total_qty', 'total_jual', 'total_modal',
         'total_belanja_supplier', 'laba', 'status_bayar', 'keterangan',
     ];
 
@@ -41,6 +41,12 @@ class Transaksi extends Model
     public function pembayarans(): HasMany
     {
         return $this->hasMany(Pembayaran::class);
+    }
+
+    /** "Nota Toko Maju · 06 Nov 2026" */
+    public function label(bool $denganKata = true): string
+    {
+        return ($denganKata ? 'Nota ' : '') . ($this->klien->nama ?? '-') . ' · ' . tanggal($this->tanggal);
     }
 
     public function totalDibayar(): float

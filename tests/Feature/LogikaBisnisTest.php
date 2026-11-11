@@ -12,6 +12,7 @@ use App\Models\Supplier;
 use App\Models\Transaksi;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class LogikaBisnisTest extends TestCase
@@ -104,12 +105,12 @@ class LogikaBisnisTest extends TestCase
         $this->assertEquals(6, (float) $this->semen->fresh()->stok);
         $this->assertEquals(0, (float) $pasir->fresh()->stok);   // sumber supplier tidak mengubah stok
 
-        // Belanja supplier = tagihan (belum ada uang keluar sampai dibayar lewat Pembayaran)
-        $this->assertEquals(0, Cashflow::where('kategori', 'belanja_supplier')->count());
+        // Belanja supplier lunas otomatis: cashflow keluar harian tanggal nota
+        $this->assertDatabaseHas('cashflows', ['kategori' => 'belanja_supplier', 'tipe' => 'keluar', 'nominal' => 500000, 'referensi_id' => 20261102]);
         $this->assertEquals(0, Cashflow::where('kategori', 'pembayaran_supplier')->count());
     }
 
-    public function test_bayar_supplier_per_tanggal_nota_dan_dijaga_saat_edit_hapus(): void
+    public function test_belanja_supplier_lunas_otomatis_per_hari(): void
     {
         $pasir = Barang::create(['nama' => 'Pasir', 'satuan' => 'm3', 'harga_jual_default' => 300000, 'stok_minimum' => 0]);
         $item = fn ($beli) => [['barang_id' => $pasir->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => 1, 'harga_beli' => $beli, 'harga_jual' => 300000]];
@@ -117,42 +118,124 @@ class LogikaBisnisTest extends TestCase
         $this->nota($item(100000));
         $this->nota($item(150000));
 
-        // Nominal nota per hari untuk supplier ini = 250.000 (2 nota)
-        $this->getJson(route('pembayaran.tagihan-supplier', ['supplier_id' => $this->supplier->id]))
-            ->assertOk()
-            ->assertJsonFragment(['value' => 'tanggal:2026-11-02', 'total' => 250000, 'sisa' => 250000]);
+        // Satu baris cashflow per hari = total nota beli supplier hari itu
+        $harian = fn ($tgl) => (float) Cashflow::where('kategori', 'belanja_supplier')->whereDate('tanggal', $tgl)->sum('nominal');
+        $this->assertEquals(1, Cashflow::where('kategori', 'belanja_supplier')->count());
+        $this->assertEquals(250000, $harian('2026-11-02'));
 
-        // Jumlah boleh diketik dengan titik ribuan
-        $this->post(route('pembayaran.store'), [
-            'tanggal' => '2026-11-03', 'jenis' => 'supplier', 'supplier_id' => $this->supplier->id,
-            'tagihan' => 'tanggal:2026-11-02', 'jumlah' => '200.000', 'metode' => 'tunai',
-        ])->assertSessionHasNoErrors();
-
-        $bayar = Pembayaran::first();
-        $this->assertEquals('2026-11-02', $bayar->tanggal_nota->toDateString());
-        $this->assertNull($bayar->pembelian_stok_id);
-        $this->assertDatabaseHas('cashflows', ['kategori' => 'pembayaran_supplier', 'tipe' => 'keluar', 'nominal' => 200000]);
-
-        // Melebihi sisa (50.000) ditolak
-        $this->post(route('pembayaran.store'), [
-            'tanggal' => '2026-11-03', 'jenis' => 'supplier', 'supplier_id' => $this->supplier->id,
-            'tagihan' => 'tanggal:2026-11-02', 'jumlah' => '60.000', 'metode' => 'tunai',
-        ])->assertSessionHasErrors('jumlah');
-
-        // Laporan supplier memperhitungkan pembayaran per tanggal nota
-        $this->get(route('laporan.supplier', ['dari' => '2026-11-01', 'sampai' => '2026-11-30']))
-            ->assertOk()
-            ->assertViewHas('total', fn ($t) => $t['belanja_langsung'] == 250000 && $t['dibayar'] == 200000 && $t['sisa'] == 50000);
-
-        // Pindah nota 150.000 ke tanggal lain → belanja 02/11 jadi 100.000 < dibayar 200.000 → ditolak
+        // Pindah tanggal nota → dua hari dihitung ulang
         $nota2 = Transaksi::latest('id')->first();
         $this->put(route('transaksi.update', $nota2), ['tanggal' => '2026-11-04', 'klien_id' => $this->klien->id, 'items' => $item(150000)])
-            ->assertSessionHas('error');
-        $this->assertEquals('2026-11-02', $nota2->fresh()->tanggal->toDateString());
+            ->assertSessionHasNoErrors();
+        $this->assertEquals(100000, $harian('2026-11-02'));
+        $this->assertEquals(150000, $harian('2026-11-04'));
 
-        // Hapus nota juga ditolak selama pembayarannya masih ada
-        $this->delete(route('transaksi.destroy', $nota2))->assertSessionHas('error');
-        $this->assertNotNull($nota2->fresh());
+        // Hapus nota → baris hari itu hilang
+        $this->delete(route('transaksi.destroy', $nota2))->assertSessionHas('success');
+        $this->assertEquals(0, Cashflow::where('kategori', 'belanja_supplier')->whereDate('tanggal', '2026-11-04')->count());
+
+        // Tidak ada lagi pembayaran ke supplier untuk nota (hanya hutang pembelian stok)
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-03', 'jenis' => 'supplier', 'supplier_id' => $this->supplier->id, 'jumlah' => '100.000', 'metode' => 'tunai',
+        ])->assertSessionHasErrors('pembelian_stok_id');
+        $this->assertEquals(0, Pembayaran::count());
+    }
+
+    public function test_pembayaran_klien_dikaitkan_ke_nota_per_nota(): void
+    {
+        $pasir = Barang::create(['nama' => 'Pasir', 'satuan' => 'm3', 'harga_jual_default' => 300000, 'stok_minimum' => 0]);
+        $item = [['barang_id' => $pasir->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => 2, 'harga_beli' => 200000, 'harga_jual' => 250000]];
+        $this->nota($item, '2026-11-02');
+        $this->nota($item, '2026-11-03');
+        [$nota1, $nota2] = Transaksi::orderBy('id')->get();
+        $lain = Klien::create(['nama' => 'Klien Lain']);
+
+        // Daftar nota klien yang belum lunas (untuk "Kaitkan ke Nota")
+        $this->getJson(route('pembayaran.nota', ['klien_id' => $this->klien->id]))
+            ->assertOk()->assertJsonCount(2)->assertJsonFragment(['value' => (string) $nota1->id, 'sisa' => 500000]);
+        $this->getJson(route('pembayaran.nota', ['klien_id' => $lain->id]))->assertOk()->assertJsonCount(0);
+
+        // Nota milik klien lain ditolak
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-04', 'jenis' => 'klien', 'klien_id' => $lain->id, 'transaksi_id' => $nota1->id, 'jumlah' => '100.000', 'metode' => 'tunai',
+        ])->assertSessionHasErrors('transaksi_id');
+
+        // Melebihi sisa nota ditolak
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-04', 'jenis' => 'klien', 'klien_id' => $this->klien->id, 'transaksi_id' => $nota1->id, 'jumlah' => '600.000', 'metode' => 'tunai',
+        ])->assertSessionHasErrors('jumlah');
+
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-04', 'jenis' => 'klien', 'klien_id' => $this->klien->id, 'transaksi_id' => $nota1->id, 'jumlah' => '500.000', 'metode' => 'transfer',
+        ])->assertSessionHasNoErrors();
+        $this->assertEquals('lunas', $nota1->fresh()->status_bayar);
+        $this->assertEquals('belum', $nota2->fresh()->status_bayar);
+
+        // Pembayaran tanpa nota tetap boleh (uang masuk)
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-05', 'jenis' => 'klien', 'klien_id' => $this->klien->id, 'jumlah' => '50.000', 'metode' => 'tunai',
+        ])->assertSessionHasNoErrors();
+        $this->assertEquals(550000, (float) Cashflow::where('kategori', 'pembayaran_klien')->sum('nominal'));
+
+        // Nota lunas tidak muncul lagi di pilihan
+        $this->getJson(route('pembayaran.nota', ['klien_id' => $this->klien->id]))->assertJsonCount(1);
+        $this->get(route('pembayaran.index'))->assertOk()->assertViewHas('ringkasan', fn ($r) => (float) $r->masuk === 550000.0);
+    }
+
+    public function test_modal_berkurang_nota_beli_dan_kembali_dari_pembayaran_klien(): void
+    {
+        $this->post(route('cashflow.store'), [
+            'tanggal' => '2026-11-01', 'tipe' => 'masuk', 'kategori' => 'modal', 'nominal' => '1.000.000', 'keterangan' => 'Modal awal',
+        ])->assertSessionHasNoErrors();
+
+        $pasir = Barang::create(['nama' => 'Pasir', 'satuan' => 'm3', 'harga_jual_default' => 0, 'stok_minimum' => 0]);
+        // Nota beli 400.000, jual 500.000
+        $this->nota([['barang_id' => $pasir->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => 1, 'harga_beli' => 400000, 'harga_jual' => 500000]]);
+        $nota = Transaksi::first();
+
+        // Klien bayar separuh → modal kembali 200.000 (bagian harga beli)
+        $this->post(route('pembayaran.store'), [
+            'tanggal' => '2026-11-03', 'jenis' => 'klien', 'klien_id' => $this->klien->id, 'transaksi_id' => $nota->id, 'jumlah' => 250000, 'metode' => 'tunai',
+        ])->assertSessionHasNoErrors();
+
+        $this->get(route('cashflow.index', ['dari' => '2026-11-01', 'sampai' => '2026-11-30']))
+            ->assertOk()
+            ->assertViewHas('modal', fn ($m) => $m['tambahan'] == 1000000 && $m['belanja'] == 400000
+                && $m['kembali'] == 200000 && $m['saldo_akhir'] == 800000);
+
+        // Periode berikutnya: modal awal = saldo akhir sebelumnya
+        $this->get(route('cashflow.index', ['dari' => '2026-12-01', 'sampai' => '2026-12-31']))
+            ->assertViewHas('modal', fn ($m) => $m['saldo_awal'] == 800000);
+
+        $this->get(route('cashflow.create', ['kategori' => 'modal']))->assertOk()->assertSee('Modal awal');
+    }
+
+    public function test_nominal_nota_tidak_hilang_nol_saat_validasi_gagal(): void
+    {
+        $pasir = Barang::create(['nama' => 'Pasir', 'satuan' => 'm3', 'harga_jual_default' => 0, 'stok_minimum' => 0]);
+
+        // Satu kolom lupa diisi (harga jual baris ke-2) → kembali ke form dengan input lama
+        $this->from(route('transaksi.create'))->post(route('transaksi.store'), ['tanggal' => '2026-11-02', 'klien_id' => $this->klien->id, 'items' => [
+            ['barang_id' => $pasir->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => '1,5', 'harga_beli' => '64.000', 'harga_jual' => '1.250.000'],
+            ['barang_id' => $pasir->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => '1000', 'harga_beli' => '50.000', 'harga_jual' => ''],
+        ]])->assertSessionHasErrors('items.1.harga_jual');
+
+        $this->get(route('transaksi.create'))->assertOk()->assertViewHas('items', function ($items) {
+            return (float) $items[0]['harga_beli'] === 64000.0 && (float) $items[0]['harga_jual'] === 1250000.0
+                && (float) $items[0]['qty'] === 1.5 && (float) $items[1]['qty'] === 1000.0 && (float) $items[1]['harga_beli'] === 50000.0;
+        });
+    }
+
+    public function test_nota_tanpa_nomor(): void
+    {
+        $this->nota([['barang_id' => $this->semen->id, 'sumber' => 'supplier', 'supplier_id' => $this->supplier->id, 'qty' => 1, 'harga_beli' => 50000, 'harga_jual' => 70000]])
+            ->assertSessionHasNoErrors();
+        $nota = Transaksi::first();
+
+        $this->assertFalse(Schema::hasColumn('transaksis', 'no_nota'));
+        $this->assertSame('Nota Klien Test · ' . tanggal('2026-11-02'), $nota->label());
+        $this->get(route('transaksi.show', $nota))->assertOk()->assertDontSee('No. Nota');
+        $this->get(route('transaksi.index', ['q' => 'Klien Test']))->assertViewHas('ringkasan', fn ($r) => (int) $r->jumlah === 1);
     }
 
     public function test_barang_baru_tidak_otomatis_masuk_data_stok(): void
@@ -200,22 +283,37 @@ class LogikaBisnisTest extends TestCase
         $this->get(route('laporan.klien', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'klien_id' => [$klien2->id, $klien3->id]]))
             ->assertOk()->assertViewHas('rows', fn ($rows) => $rows->count() === 2)->assertViewHas('rows', fn ($rows) => $rows->pluck('nama')->sort()->values()->all() === ['Klien Dua', 'Klien Tiga']);
         $this->get(route('laporan.supplier', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id]]))
-            ->assertOk()->assertViewHas('total', fn ($t) => $t['belanja_langsung'] == 200000);
+            ->assertOk()->assertViewHas('total', fn ($t) => $t['total_beli'] == 200000)
+            // Daftar barang per supplier (seperti web sayur), klien disembunyikan → qty semua klien digabung
+            ->assertViewHas('rincian', fn ($r) => $r->count() === 1 && $r->first()->items->count() === 1 && $r->first()->items->first()->qty == 2)
+            ->assertSee('Barang dari UD Dua');
+        $this->get(route('laporan.supplier', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id], 'klien' => 'tampil']))
+            ->assertOk()->assertViewHas('rincian', fn ($r) => $r->first()->items->count() === 2);
+        $this->get(route('laporan.supplier', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id], 'qty' => 'rincian']))
+            ->assertOk()->assertSee('1 + 1 m3');
         $this->get(route('laporan.barang', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'klien_id' => [$this->klien->id, $klien3->id]]))
-            ->assertOk()->assertViewHas('rows', fn ($rows) => $rows->first()->qty_total == 2);
+            ->assertOk()->assertViewHas('rows', fn ($rows) => $rows->count() === 1 && $rows->first()->qty == 2);
+        $this->get(route('laporan.barang', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'klien' => 'tampil']))
+            ->assertOk()->assertViewHas('rows', fn ($rows) => $rows->count() === 3);
+
+        // Laporan klien: tampilan awal Klien · Kategori · Total Jual · Total Beli · Laba (tanpa dibayar/sisa)
+        $this->get(route('laporan.klien', ['dari' => '2026-11-01', 'sampai' => '2026-11-30']))
+            ->assertOk()->assertSee('Total Beli')->assertDontSee('Sisa Piutang')->assertDontSee('Dibayar')
+            ->assertViewHas('rincian', fn ($r) => $r->isEmpty())
+            ->assertViewHas('total', fn ($t) => $t['total_jual'] == 450000 && $t['total_beli'] == 300000 && $t['laba'] == 150000);
+        // Klien dipilih → rincian barang; mode harga "Jual saja" menyembunyikan harga beli & laba
+        $this->get(route('laporan.klien', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'klien_id' => [$klien2->id, $klien3->id], 'harga' => 'jual']))
+            ->assertOk()->assertViewHas('rincian', fn ($r) => $r->count() === 2)->assertDontSee('Total Beli')->assertDontSee('Harga Beli');
+        $this->get(route('laporan.klien', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'klien_id' => [$klien2->id, $klien3->id], 'klien' => 'sembunyi']))
+            ->assertOk()->assertViewHas('rincian', fn ($r) => $r->count() === 1 && $r->first()->items->count() === 1);
 
         // Laporan klien difilter supplier: hanya nota berisi barang supplier2 (klien2 & klien3)
         $this->get(route('laporan.klien', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id]]))
             ->assertOk()->assertViewHas('rows', fn ($rows) => $rows->count() === 2);
 
-        // Laporan supplier difilter klien: belanja supplier2 hanya dari klien2 (100.000);
-        // bayar 100.000 untuk tanggal itu (belanja semua klien 200.000) → porsi klien2 = 50.000
-        $this->post(route('pembayaran.store'), [
-            'tanggal' => '2026-11-03', 'jenis' => 'supplier', 'supplier_id' => $supplier2->id,
-            'tagihan' => 'tanggal:2026-11-02', 'jumlah' => '100.000', 'metode' => 'tunai',
-        ])->assertSessionHasNoErrors();
+        // Laporan supplier difilter klien: belanja supplier2 hanya dari klien2 (100.000)
         $this->get(route('laporan.supplier', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id], 'klien_id' => [$klien2->id]]))
-            ->assertOk()->assertViewHas('total', fn ($t) => $t['belanja_langsung'] == 100000 && $t['dibayar'] == 50000 && $t['sisa'] == 50000);
+            ->assertOk()->assertViewHas('total', fn ($t) => $t['total_beli'] == 100000);
 
         // Laporan stok bisa difilter supplier barang
         $this->get(route('laporan.stok', ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'supplier_id' => [$supplier2->id]]))
@@ -273,7 +371,7 @@ class LogikaBisnisTest extends TestCase
         $this->nota([['barang_id' => $this->semen->id, 'sumber' => 'stok', 'qty' => 2, 'harga_jual' => 70000]]);
         $nota = Transaksi::first();
 
-        $this->post(route('pembayaran.store'), ['tanggal' => '2026-11-02', 'jenis' => 'klien', 'transaksi_id' => $nota->id, 'jumlah' => 140000, 'metode' => 'transfer'])
+        $this->post(route('pembayaran.store'), ['tanggal' => '2026-11-02', 'jenis' => 'klien', 'klien_id' => $this->klien->id, 'transaksi_id' => $nota->id, 'jumlah' => 140000, 'metode' => 'transfer'])
             ->assertSessionHasNoErrors();
 
         $this->assertEquals('lunas', $nota->fresh()->status_bayar);

@@ -9,7 +9,7 @@
 @section('content')
 <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
     @if ($pembelian->metode_bayar === 'hutang' && $pembelian->status_bayar !== 'lunas')
-        <a href="{{ route('pembayaran.create', ['jenis' => 'supplier', 'pembelian_stok_id' => $pembelian->id]) }}" class="btn btn-sm btn-success">
+        <a href="{{ route('pembayaran.create', ['pembelian_stok_id' => $pembelian->id]) }}" class="btn btn-sm btn-success">
             <i class="bi bi-credit-card me-1"></i>Bayar Hutang
         </a>
     @endif
@@ -73,9 +73,13 @@
             <div class="card">
                 <div class="card-header"><h6 class="card-title">Riwayat Pembayaran</h6></div>
                 @forelse ($pembelian->pembayarans as $bayar)
-                    <div class="card-body py-2 border-bottom d-flex justify-content-between small">
+                    <div class="card-body py-2 border-bottom d-flex justify-content-between align-items-center gap-2 small">
                         <span>{{ tanggal($bayar->tanggal) }} · {{ ucfirst($bayar->metode) }}</span>
-                        <strong>{{ rupiah($bayar->jumlah) }}</strong>
+                        <span class="text-nowrap">
+                            <strong class="me-2">{{ rupiah($bayar->jumlah) }}</strong>
+                            <a href="{{ route('pembayaran.edit', $bayar) }}" class="btn btn-sm btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <x-tombol-hapus :action="route('pembayaran.destroy', $bayar)" :nama="'pembayaran ' . rupiah($bayar->jumlah)" />
+                        </span>
                     </div>
                 @empty
                     <div class="card-body small text-muted">Belum ada pembayaran.</div>

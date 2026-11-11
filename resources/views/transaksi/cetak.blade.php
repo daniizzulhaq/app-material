@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Nota {{ $transaksi->no_nota }}</title>
+    <title>{{ $transaksi->label() }}</title>
     {{-- CSS inline & layout tabel agar kompatibel dengan DomPDF --}}
     <style>
         * { box-sizing: border-box; }
@@ -57,7 +57,6 @@
             </td>
             <td style="vertical-align: top">
                 <table>
-                    <tr><td class="muted">No. Nota</td><td><strong>{{ $transaksi->no_nota }}</strong></td></tr>
                     <tr><td class="muted">Tanggal</td><td>{{ tanggal($transaksi->tanggal) }}</td></tr>
                     <tr><td class="muted">Status</td><td><span class="status status-{{ $transaksi->status_bayar }}">{{ strtoupper($transaksi->status_bayar) }}</span></td></tr>
                 </table>

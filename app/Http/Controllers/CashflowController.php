@@ -6,6 +6,7 @@ use App\Services\RiwayatService;
 use App\Http\Requests\CashflowRequest;
 use App\Models\Cashflow;
 use App\Services\CashflowService;
+use App\Services\ModalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -47,12 +48,23 @@ class CashflowController extends Controller
 
         $cashflows = $filter->orderBy('tanggal')->orderBy('id')->paginate(25)->withQueryString();
 
-        return view('cashflow.index', compact('cashflows', 'saldoAwal', 'saldoAkhir', 'totalPeriode', 'totalFilter', 'dari', 'sampai'));
+        // Perputaran modal: modal − total nota beli per hari + bagian beli yang dibayar klien
+        $modal = app(ModalService::class)->ringkasan($dari, $sampai);
+
+        return view('cashflow.index', compact('cashflows', 'saldoAwal', 'saldoAkhir', 'totalPeriode', 'totalFilter', 'dari', 'sampai', 'modal'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('cashflow.form', ['cashflow' => new Cashflow(['tanggal' => now(), 'tipe' => 'keluar', 'kategori' => 'operasional'])]);
+        // ?kategori=modal → tombol "Input Modal Awal"
+        $modal = $request->input('kategori') === 'modal';
+
+        return view('cashflow.form', ['cashflow' => new Cashflow([
+            'tanggal' => now(),
+            'tipe' => $modal ? 'masuk' : 'keluar',
+            'kategori' => $modal ? 'modal' : 'operasional',
+            'keterangan' => $modal ? 'Modal awal' : null,
+        ])]);
     }
 
     public function store(CashflowRequest $request): RedirectResponse

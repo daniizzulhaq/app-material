@@ -14,6 +14,8 @@
         .num, .text-end { text-align: right; white-space: nowrap; }
         p.small { color: #666; font-size: 8px; margin-top: 8px; }
         .footer { margin-top: 10px; color: #999; font-size: 8px; }
+        .judul-rincian { font-weight: bold; font-size: 11px; margin: 4px 0 5px; }
+        table.tabel-rincian { margin-bottom: 4px; }
     </style>
 </head>
 <body>

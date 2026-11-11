@@ -55,9 +55,9 @@
 {{-- Top 3 --}}
 <div class="row g-3 mb-4">
     @foreach ([
-        ['judul' => 'Top 3 Supplier', 'icon' => 'bi-truck', 'rows' => $topSupplier, 'nilai' => 'total', 'sub' => fn ($r) => 'Langsung ' . rupiah($r->belanja_langsung) . ' · Stok ' . rupiah($r->pembelian_stok)],
-        ['judul' => 'Top 3 Barang', 'icon' => 'bi-box-seam', 'rows' => $topBarang, 'nilai' => 'total_jual', 'sub' => fn ($r) => qty($r->qty_total) . ' ' . $r->satuan . ' · laba ' . rupiah($r->laba)],
-        ['judul' => 'Top 3 Klien', 'icon' => 'bi-people', 'rows' => $topKlien, 'nilai' => 'total_jual', 'sub' => fn ($r) => $r->jumlah_nota . ' nota · laba ' . rupiah($r->laba)],
+        ['judul' => 'Top 3 Supplier', 'icon' => 'bi-truck', 'rows' => $topSupplier, 'nilai' => 'total', 'sub' => fn ($r) => 'Nota ' . rupiah($r->total_beli) . ' · Stok ' . rupiah($r->pembelian_stok)],
+        ['judul' => 'Top 3 Barang', 'icon' => 'bi-box-seam', 'rows' => $topBarang, 'nilai' => 'total_jual', 'sub' => fn ($r) => qty($r->qty) . ' ' . $r->satuan . ' · laba ' . rupiah($r->laba)],
+        ['judul' => 'Top 3 Klien', 'icon' => 'bi-people', 'rows' => $topKlien, 'nilai' => 'total_jual', 'sub' => fn ($r) => $r->nota . ' nota · laba ' . rupiah($r->laba)],
     ] as $top)
         <div class="col-lg-4">
             <div class="card h-100">
@@ -95,14 +95,13 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
-                            <tr><th>Nota</th><th>Klien</th><th class="text-end">Total</th><th class="text-end">Laba</th><th>Status</th></tr>
+                            <tr><th>Tanggal</th><th>Klien</th><th class="text-end">Total</th><th class="text-end">Laba</th><th>Status</th></tr>
                         </thead>
                         <tbody>
                             @foreach ($transaksiTerakhir as $t)
                                 <tr>
                                     <td>
-                                        <a href="{{ route('transaksi.show', $t) }}" class="fw-semibold text-decoration-none">{{ $t->no_nota }}</a>
-                                        <div class="small text-muted">{{ tanggal($t->tanggal) }}</div>
+                                        <a href="{{ route('transaksi.show', $t) }}" class="fw-semibold text-decoration-none">{{ tanggal($t->tanggal) }}</a>
                                     </td>
                                     <td>{{ $t->klien->nama }}</td>
                                     <td class="num">{{ rupiah($t->total_jual) }}</td>

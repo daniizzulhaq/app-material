@@ -75,7 +75,7 @@
                     @endif
                 @endforeach
             @endforeach
-            <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Cari no. nota...">
+            <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Cari klien / keterangan...">
             <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>
         </form>
         <a href="{{ route('transaksi.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Nota Baru</a>
@@ -91,7 +91,6 @@
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>No. Nota</th>
                         <th>Tanggal</th>
                         <th>Klien</th>
                         <th class="text-end">Item</th>
@@ -106,8 +105,7 @@
                 <tbody>
                     @foreach ($transaksis as $t)
                         <tr>
-                            <td><a href="{{ route('transaksi.show', $t) }}" class="fw-semibold text-decoration-none">{{ $t->no_nota }}</a></td>
-                            <td class="text-nowrap">{{ tanggal($t->tanggal) }}</td>
+                            <td class="text-nowrap"><a href="{{ route('transaksi.show', $t) }}" class="fw-semibold text-decoration-none">{{ tanggal($t->tanggal) }}</a></td>
                             <td>{{ $t->klien->nama }} <x-kategori-badge :kategori="$t->klien->kategori" class="ms-1" /></td>
                             <td class="num">{{ $t->details_count }}</td>
                             <td class="num fw-semibold">{{ rupiah($t->total_jual) }}</td>
@@ -119,7 +117,7 @@
                                 <a href="{{ route('transaksi.show', $t) }}" class="btn btn-sm btn-light" title="Detail"><i class="bi bi-eye"></i></a>
                                 <a href="{{ route('transaksi.edit', $t) }}" class="btn btn-sm btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
                                 <a href="{{ route('transaksi.cetak', $t) }}" target="_blank" class="btn btn-sm btn-light" title="Cetak nota"><i class="bi bi-printer"></i></a>
-                                <x-tombol-hapus :action="route('transaksi.destroy', $t)" :nama="$t->no_nota" />
+                                <x-tombol-hapus :action="route('transaksi.destroy', $t)" :nama="$t->label()" />
                             </td>
                         </tr>
                     @endforeach

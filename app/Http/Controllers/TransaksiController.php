@@ -35,7 +35,10 @@ class TransaksiController extends Controller
             ->when(array_key_exists((string) $request->kategori, Klien::KATEGORI),
                 fn ($q) => $q->whereIn('klien_id', Klien::kategori($request->kategori)->select('id')))
             ->when($request->filled('status_bayar'), fn ($q) => $q->where('status_bayar', $request->status_bayar))
-            ->when($request->filled('q'), fn ($q) => $q->where('no_nota', 'like', "%{$request->q}%"))
+            // Nota tanpa nomor: cari dari nama klien / keterangan
+            ->when($request->filled('q'), fn ($q) => $q->where(fn ($x) => $x
+                ->whereHas('klien', fn ($k) => $k->where('nama', 'like', "%{$request->q}%"))
+                ->orWhere('keterangan', 'like', "%{$request->q}%")))
             // Filter berdasarkan isi item nota
             ->when($supplierIds || $request->filled('barang_id') || $request->filled('sumber'), function ($q) use ($request, $supplierIds) {
                 $q->whereHas('details', function ($d) use ($request, $supplierIds) {
@@ -72,7 +75,7 @@ class TransaksiController extends Controller
     {
         $transaksi = $this->service->simpan($request->validated());
 
-        return redirect()->route('transaksi.show', $transaksi)->with('success', "Nota {$transaksi->no_nota} berhasil disimpan.");
+        return redirect()->route('transaksi.show', $transaksi)->with('success', $transaksi->label() . ' berhasil disimpan.');
     }
 
     public function show(Transaksi $transaksi): View
@@ -93,14 +96,14 @@ class TransaksiController extends Controller
     {
         $this->service->simpan($request->validated(), $transaksi);
 
-        return redirect()->route('transaksi.show', $transaksi)->with('success', "Nota {$transaksi->no_nota} berhasil diperbarui.");
+        return redirect()->route('transaksi.show', $transaksi)->with('success', $transaksi->fresh('klien')->label() . ' berhasil diperbarui.');
     }
 
     public function destroy(Transaksi $transaksi, RiwayatService $riwayat): RedirectResponse
     {
         $riwayat->hapus($transaksi, fn () => $this->service->hapus($transaksi));
 
-        return redirect()->route('transaksi.index')->with('success', "Nota {$transaksi->no_nota} berhasil dihapus.");
+        return redirect()->route('transaksi.index')->with('success', $transaksi->label() . ' berhasil dihapus.');
     }
 
     /** Cetak nota: tampilan cetak browser, atau unduh PDF dengan ?pdf=1 */
@@ -112,7 +115,7 @@ class TransaksiController extends Controller
         if ($request->boolean('pdf')) {
             return Pdf::loadView('transaksi.cetak', ['transaksi' => $transaksi, 'pdf' => true])
                 ->setPaper('a5', 'landscape')
-                ->download("Nota-{$transaksi->no_nota}.pdf");
+                ->download('Nota-' . \Illuminate\Support\Str::slug($transaksi->klien->nama) . '-' . $transaksi->tanggal->toDateString() . '.pdf');
         }
 
         return view('transaksi.cetak', ['transaksi' => $transaksi, 'pdf' => false]);
@@ -123,6 +126,16 @@ class TransaksiController extends Controller
         $items = old('items', $transaksi->exists
             ? $transaksi->details->map(fn ($d) => $d->only(['barang_id', 'sumber', 'supplier_id', 'qty', 'harga_beli', 'harga_jual']))->all()
             : []);
+
+        // Input lama (setelah validasi gagal) masih berformat form: "64.000" / "2,5".
+        // Ubah ke angka murni dulu; kalau tidak, JS membaca "64.000" sebagai 64 (nol hilang).
+        if (is_array(old('items'))) {
+            $items = collect($items)->map(fn ($i) => is_array($i) ? array_merge($i, [
+                'qty' => baca_qty($i['qty'] ?? null),
+                'harga_beli' => baca_uang($i['harga_beli'] ?? null),
+                'harga_jual' => baca_uang($i['harga_jual'] ?? null),
+            ]) : $i)->all();
+        }
 
         // Stok tersedia saat edit = stok sekarang + qty yang dipakai nota ini
         $qtyNotaIni = $transaksi->exists

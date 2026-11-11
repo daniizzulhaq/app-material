@@ -1,62 +1,74 @@
-{{-- $excel = true → angka mentah agar bisa dihitung di Excel --}}
+{{--
+    Laporan per klien. Tampilan awal: Klien · Kategori · Total Jual · Total Beli · Laba.
+    Rincian barang muncul bila klien dipilih. $excel = true → angka mentah agar bisa dihitung di Excel.
+--}}
 @php
+    $html = ! $excel && ! ($pdf ?? false);
     $uang = fn ($v) => $excel ? round((float) $v, 2) : rupiah($v);
+    $labelKategori = fn ($k) => \App\Models\Klien::KATEGORI[$k]['label'] ?? '-';
 @endphp
+
+@if ($rincian->isNotEmpty())
+    @include('laporan._rincian', [
+        'judulRincian' => 'Rincian Barang',
+        'kolomKlien' => false,
+        'kolomSumber' => $opsi->beli(), // supplier hanya tampil bila harga beli ikut ditampilkan (laporan internal)
+    ])
+    @if ($excel)
+        <table><tr><td><strong>Jumlah Keseluruhan</strong></td></tr></table>
+    @else
+        <div class="judul-rincian {{ $html ? 'px-3 pt-3 pb-2 fw-bold border-top' : '' }}">Jumlah Keseluruhan</div>
+    @endif
+@endif
+
 <table class="table table-hover align-middle">
     <thead>
         <tr>
-            @if ($klien)
-                <th>No. Nota</th>
-                <th>Tanggal</th>
-                <th>Status</th>
-            @else
-                <th>Klien</th>
-                <th>Kategori</th>
-                <th class="text-end num">Jumlah Nota</th>
-            @endif
-            <th class="text-end num">Total Jual</th>
-            <th class="text-end num">Dibayar</th>
-            <th class="text-end num">Sisa Piutang</th>
-            <th class="text-end num">Laba</th>
+            <th>Klien</th>
+            <th>Kategori</th>
+            @if ($opsi->jual()) <th class="text-end num">Total Jual</th> @endif
+            @if ($opsi->beli()) <th class="text-end num">Total Beli</th> @endif
+            @if ($opsi->laba()) <th class="text-end num">Laba</th> @endif
+            @unless ($opsi->adaHarga()) <th class="text-end num">Jumlah Nota</th> @endunless
         </tr>
     </thead>
     <tbody>
         @foreach ($rows as $r)
             <tr>
-                @if ($klien)
-                    <td>{{ $r->no_nota }}</td>
-                    <td>{{ tanggal($r->tanggal) }}</td>
-                    <td>{{ ucfirst($r->status_bayar) }}</td>
-                @else
-                    <td>{{ $r->nama }}</td>
-                    <td>{{ \App\Models\Klien::KATEGORI[$r->kategori]['label'] ?? '-' }}</td>
-                    <td class="num">{{ $r->jumlah_nota }}</td>
-                @endif
-                <td class="num">{{ $uang($r->total_jual) }}</td>
-                <td class="num">{{ $uang($r->dibayar) }}</td>
-                <td class="num">{{ $uang($r->sisa) }}</td>
-                <td class="num">{{ $uang($r->laba) }}</td>
+                <td>
+                    @if ($html)
+                        <a href="{{ request()->fullUrlWithQuery(['klien_id' => [$r->id], 'export' => null, 'unduh' => null]) }}" class="text-decoration-none" title="Lihat rincian barang">{{ $r->nama }}</a>
+                    @else
+                        {{ $r->nama }}
+                    @endif
+                </td>
+                <td>{{ $labelKategori($r->kategori) }}</td>
+                @if ($opsi->jual()) <td class="num">{{ $uang($r->total_jual) }}</td> @endif
+                @if ($opsi->beli()) <td class="num">{{ $uang($r->total_beli) }}</td> @endif
+                @if ($opsi->laba()) <td class="num {{ $html ? ($r->laba < 0 ? 'text-danger' : 'text-success') : '' }}">{{ $uang($r->laba) }}</td> @endif
+                @unless ($opsi->adaHarga()) <td class="num">{{ $r->nota }}</td> @endunless
             </tr>
         @endforeach
     </tbody>
     <tfoot>
         @foreach ($totalKategori ?? [] as $val => $t)
             <tr>
-                <th colspan="2">Total Klien {{ \App\Models\Klien::KATEGORI[$val]['label'] }}</th>
-                <th class="num">{{ $t['jumlah_nota'] }}</th>
-                <th class="num">{{ $uang($t['total_jual']) }}</th>
-                <th class="num">{{ $uang($t['dibayar']) }}</th>
-                <th class="num">{{ $uang($t['sisa']) }}</th>
-                <th class="num">{{ $uang($t['laba']) }}</th>
+                <th colspan="2">Total Klien {{ $labelKategori($val) }}</th>
+                @if ($opsi->jual()) <th class="num">{{ $uang($t['total_jual']) }}</th> @endif
+                @if ($opsi->beli()) <th class="num">{{ $uang($t['total_beli']) }}</th> @endif
+                @if ($opsi->laba()) <th class="num">{{ $uang($t['laba']) }}</th> @endif
+                @unless ($opsi->adaHarga()) <th class="num">{{ $t['nota'] }}</th> @endunless
             </tr>
         @endforeach
         <tr>
-            <th colspan="{{ $klien ? 3 : 2 }}">TOTAL{{ $kategori ? ' KLIEN ' . strtoupper(\App\Models\Klien::KATEGORI[$kategori]['label']) : '' }}</th>
-            @unless ($klien) <th class="num">{{ $total['jumlah_nota'] }}</th> @endunless
-            <th class="num">{{ $uang($total['total_jual']) }}</th>
-            <th class="num">{{ $uang($total['dibayar']) }}</th>
-            <th class="num">{{ $uang($total['sisa']) }}</th>
-            <th class="num">{{ $uang($total['laba']) }}</th>
+            <th colspan="2">TOTAL{{ $kategori ? ' KLIEN ' . strtoupper($labelKategori($kategori)) : '' }}</th>
+            @if ($opsi->jual()) <th class="num">{{ $uang($total['total_jual']) }}</th> @endif
+            @if ($opsi->beli()) <th class="num">{{ $uang($total['total_beli']) }}</th> @endif
+            @if ($opsi->laba()) <th class="num">{{ $uang($total['laba']) }}</th> @endif
+            @unless ($opsi->adaHarga()) <th class="num">{{ $total['nota'] }}</th> @endunless
         </tr>
     </tfoot>
 </table>
+@if ($html)
+    <p class="small text-muted px-3 py-2 mb-0"><i class="bi bi-info-circle me-1"></i>Klik nama klien (atau pilih klien di filter) untuk melihat rincian barangnya. Nama Klien "Sembunyikan" = rincian beberapa klien digabung jadi satu tabel.</p>
+@endif

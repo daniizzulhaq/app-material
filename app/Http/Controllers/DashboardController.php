@@ -7,6 +7,7 @@ use App\Models\PembelianStok;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Services\LaporanService;
+use App\Support\OpsiLaporan;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,9 +40,12 @@ class DashboardController extends Controller
         $nilaiStok = (float) Barang::sum(DB::raw('stok * hpp'));
 
         // Top 3 (memakai query laporan agar angkanya konsisten)
-        $topSupplier = $this->laporan->supplier($dari, $sampai)['rows']->take(3);
-        $topBarang = $this->laporan->barang($dari, $sampai)['rows']->take(3);
-        $topKlien = $this->laporan->klien($dari, $sampai)['rows']->take(3);
+        $opsi = new OpsiLaporan(tampilKlien: false);
+        $topSupplier = $this->laporan->supplier($dari, $sampai, [], [], $opsi)['rows']
+            ->each(fn ($r) => $r->total = $r->total_beli + $r->pembelian_stok)
+            ->sortByDesc('total')->take(3);
+        $topBarang = $this->laporan->barang($dari, $sampai, null, [], [], $opsi)['rows']->sortByDesc('total_jual')->take(3);
+        $topKlien = $this->laporan->klien($dari, $sampai, [], null, [], $opsi)['rows']->sortByDesc('total_jual')->take(3);
 
         $transaksiTerakhir = Transaksi::with('klien')->latest('tanggal')->latest('id')->take(5)->get();
         $stokMenipis = Barang::menipis()->orderByRaw('stok - stok_minimum')->take(8)->get();

@@ -68,6 +68,8 @@ class KategoriKlienTest extends TestCase
                 'items' => [['barang_id' => $barang->id, 'sumber' => 'supplier', 'supplier_id' => $supplier->id, 'qty' => 1, 'harga_beli' => 50000, 'harga_jual' => $harga]],
             ])->assertSessionHasNoErrors();
         }
+        // Habiskan flash "Nota CV Bangun ... berhasil disimpan" agar tidak ikut terbaca di halaman laporan
+        $this->get(route('dashboard'));
 
         $this->get(route('laporan.klien', ['kategori' => 'groceries']))
             ->assertOk()->assertSee('Warung Bu Ani')->assertDontSee('CV Bangun')
